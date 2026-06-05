@@ -95,6 +95,7 @@ Read these before writing code:
 - `README.md`
 - `README.CN.md`
 - `docs/PROJECT_NOTES.md`
+- `docs/PLATFORM_STRATEGY.md`
 - `NOTICE.md`
 - `src/ns2/ns2_input.cpp`
 - `src/ns2/ns2_usb.cpp`
@@ -182,6 +183,7 @@ Please first read:
 - README.CN.md
 - docs/PROJECT_NOTES.md
 - docs/ESP32S3_HANDOFF.md
+- docs/PLATFORM_STRATEGY.md
 - NOTICE.md
 - src/ns2/ns2_input.cpp
 - src/ns2/ns2_usb.cpp

@@ -264,6 +264,8 @@ Before publishing to GitHub:
 - `tools/ns2-webhid-tuner.html` - WebHID configuration and visualization page.
 - `docs/ESP32S3_HANDOFF.md` - handoff notes for the experimental ESP32-S3
   branch.
+- `docs/PLATFORM_STRATEGY.md` - multi-platform branch, release, and capability
+  matrix policy.
 
 ## 10. Non-Goals for the Current Stage
 
