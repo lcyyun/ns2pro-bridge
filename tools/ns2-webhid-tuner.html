@@ -1,0 +1,1472 @@
+<!doctype html>
+<!--
+  NS2Pro WebHID tuner for ns2pro-bridge.
+  Status, report-rate, and live input concepts were informed by the
+  y700-switch2-pro-bridge manager tooling and adapted for Pico WebHID.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>NS2Pro USB Tuner</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111318;
+      --panel: #1a1d24;
+      --panel-soft: #202530;
+      --text: #edf1f7;
+      --muted: #95a0ae;
+      --line: #323946;
+      --accent: #47c7b0;
+      --accent-strong: #67e0c8;
+      --warn: #e3b341;
+      --bad: #f26b6b;
+      --ok: #65d58c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: 0;
+    }
+
+    main {
+      width: min(1160px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 32px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 650;
+    }
+
+    .device-line {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--text);
+      padding: 0 13px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #04120f;
+      font-weight: 650;
+    }
+
+    button.danger {
+      border-color: rgba(242, 107, 107, 0.55);
+      color: #ffd1d1;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 650;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .value {
+      font-size: 24px;
+      line-height: 1.15;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .value.small {
+      font-size: 16px;
+      font-weight: 550;
+      line-height: 1.45;
+    }
+
+    .ok {
+      color: var(--ok);
+    }
+
+    .warn {
+      color: var(--warn);
+    }
+
+    .bad {
+      color: var(--bad);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(300px, 430px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      grid-template-columns: 126px minmax(100px, 1fr) 78px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-strong);
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #12151b;
+      color: var(--text);
+      padding: 0 10px;
+      font: inherit;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--text);
+      padding: 0 12px;
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+    }
+
+    .visual-grid {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .sticks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stick-wrap {
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .stick {
+      position: relative;
+      width: 92px;
+      aspect-ratio: 1;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background:
+        linear-gradient(90deg, transparent calc(50% - 1px), #394251 50%, transparent calc(50% + 1px)),
+        linear-gradient(0deg, transparent calc(50% - 1px), #394251 50%, transparent calc(50% + 1px)),
+        #10141b;
+      overflow: hidden;
+    }
+
+    .knob {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-strong);
+      box-shadow: 0 0 0 5px rgba(103, 224, 200, 0.13);
+      transform: translate(-50%, -50%);
+      will-change: transform;
+    }
+
+    .imu-box-wrap {
+      display: grid;
+      grid-column: 1 / -1;
+      gap: 8px;
+      justify-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .imu-scene {
+      width: 132px;
+      height: 118px;
+      display: grid;
+      place-items: center;
+      perspective: 520px;
+    }
+
+    .motion-cube {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      transform-style: preserve-3d;
+      transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+      will-change: transform;
+    }
+
+    .cube-face {
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(237, 241, 247, 0.25);
+      background: rgba(103, 224, 200, 0.16);
+      box-shadow: inset 0 0 20px rgba(103, 224, 200, 0.08);
+    }
+
+    .cube-front {
+      background: rgba(103, 224, 200, 0.28);
+      transform: translateZ(36px);
+    }
+
+    .cube-back {
+      background: rgba(242, 107, 107, 0.18);
+      transform: rotateY(180deg) translateZ(36px);
+    }
+
+    .cube-right {
+      background: rgba(227, 179, 65, 0.18);
+      transform: rotateY(90deg) translateZ(36px);
+    }
+
+    .cube-left {
+      background: rgba(101, 213, 140, 0.16);
+      transform: rotateY(-90deg) translateZ(36px);
+    }
+
+    .cube-top {
+      background: rgba(237, 241, 247, 0.18);
+      transform: rotateX(90deg) translateZ(36px);
+    }
+
+    .cube-bottom {
+      background: rgba(71, 199, 176, 0.10);
+      transform: rotateX(-90deg) translateZ(36px);
+    }
+
+    .axis-list {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .axis-line {
+      display: grid;
+      grid-template-columns: 38px minmax(70px, 1fr) 62px;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .axis-bar {
+      position: relative;
+      height: 9px;
+      border-radius: 999px;
+      background: #10141b;
+      border: 1px solid #313947;
+      overflow: hidden;
+    }
+
+    .axis-bar::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 1px;
+      height: 100%;
+      background: #596475;
+    }
+
+    .axis-fill {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      left: 50%;
+      width: 0;
+      background: var(--accent);
+    }
+
+    .axis-value {
+      text-align: right;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .log {
+      min-height: 300px;
+      max-height: 520px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0c0f14;
+      padding: 12px;
+      color: #c9d1dc;
+      font: 13px/1.45 Consolas, "Cascadia Mono", monospace;
+    }
+
+    .raw-command {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 860px) {
+      header,
+      .grid,
+      .status-row {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+
+      .field {
+        grid-template-columns: 1fr;
+      }
+
+      .visual-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1 data-i18n="appTitle">NS2Pro USB Tuner</h1>
+        <div class="device-line" id="deviceLine">No device selected</div>
+      </div>
+      <div class="toolbar">
+        <button id="langBtn" type="button">中文</button>
+        <label class="toggle" data-i18n-title="liveHelp" title="Read normal input reports in real time without filling the log.">
+          <input id="liveToggle" type="checkbox" checked>
+          <span data-i18n="live">Live</span>
+        </label>
+        <button id="connectBtn" class="primary" data-i18n="connect">Connect</button>
+        <button id="reuseBtn" data-i18n="reuse">Use Existing</button>
+        <button id="refreshBtn" data-i18n="refresh" disabled>Refresh</button>
+      </div>
+    </header>
+
+    <section class="status-row">
+      <div class="panel">
+        <h2 data-i18n="connection">Connection</h2>
+        <div class="value bad" id="connectionValue">Disconnected</div>
+      </div>
+      <div class="panel">
+        <h2>USB</h2>
+        <div class="value small" id="usbValue">-</div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="input">Input</h2>
+        <div class="value small" id="inputValue">-</div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="rumble">Rumble</h2>
+        <div class="value small" id="rumbleValue">-</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel controls">
+        <h2 data-i18n="haptics">Haptics</h2>
+        <div class="field">
+          <label for="scale" data-i18n="scalePercent" data-i18n-title="scaleHelp" title="Rumble amplitude multiplier. 60 is the current default; higher values feel stronger.">Scale percent</label>
+          <input id="scale" type="range" min="5" max="250" step="1" value="60">
+          <input id="scaleNum" type="number" min="5" max="250" step="1" value="60">
+        </div>
+        <div class="field">
+          <label for="hold" data-i18n="holdMs" data-i18n-title="holdHelp" title="How long one incoming rumble update is kept alive before timing out.">Hold ms</label>
+          <input id="hold" type="range" min="20" max="3000" step="10" value="140">
+          <input id="holdNum" type="number" min="20" max="3000" step="10" value="140">
+        </div>
+        <div class="field">
+          <label for="tick" data-i18n="tickMs" data-i18n-title="tickHelp" title="Interval for forwarding repeated HD rumble packets to the controller.">Tick ms</label>
+          <input id="tick" type="range" min="5" max="100" step="1" value="30">
+          <input id="tickNum" type="number" min="5" max="100" step="1" value="30">
+        </div>
+        <div class="field">
+          <label for="stops" data-i18n="stopPackets" data-i18n-title="stopPacketsHelp" title="Number of zero-rumble packets sent when stopping, to clear lingering vibration.">Stop packets</label>
+          <input id="stops" type="range" min="1" max="12" step="1" value="3">
+          <input id="stopsNum" type="number" min="1" max="12" step="1" value="3">
+        </div>
+        <h2>USB</h2>
+        <div class="field">
+          <label for="rate" data-i18n="reportHz" data-i18n-title="reportHzHelp" title="Input report frequency sent to the host. Default is 250 Hz.">Report Hz</label>
+          <input id="rate" type="range" min="60" max="1000" step="5" value="250">
+          <input id="rateNum" type="number" min="60" max="1000" step="5" value="250">
+        </div>
+        <h2 data-i18n="settings">Settings</h2>
+        <label class="toggle" data-i18n-title="displayHelp" title="Disable the ST7789 status screen to reduce SPI refresh work.">
+          <input id="displayToggle" type="checkbox" checked>
+          <span data-i18n="display">Display</span>
+        </label>
+        <label class="toggle" data-i18n-title="rawHelp" title="Send the controller's raw FD2 input payload as USB report data.">
+          <input id="rawToggle" type="checkbox" checked>
+          <span data-i18n="rawUsb">Raw USB</span>
+        </label>
+        <label class="toggle" data-i18n-title="parseHelp" title="Parse normal input reports in the web UI for live sticks and motion visuals. Actual Hz is still counted when this is off.">
+          <input id="parseToggle" type="checkbox" checked>
+          <span data-i18n="parseInput">Parse Input</span>
+        </label>
+        <div class="actions">
+          <button id="applyBtn" class="primary" data-i18n="apply" disabled>Apply</button>
+          <button id="saveBtn" data-i18n="save" disabled>Save</button>
+          <button id="onBtn" data-i18n="rumbleOn" disabled>Rumble On</button>
+          <button id="offBtn" data-i18n="rumbleOff" disabled>Rumble Off</button>
+          <button id="stopBtn" class="danger" data-i18n="stop" disabled>Stop</button>
+        </div>
+        <div class="actions">
+          <button data-test="left" data-i18n="testLeft" disabled>Test Left</button>
+          <button data-test="right" data-i18n="testRight" disabled>Test Right</button>
+          <button data-test="both" data-i18n="testBoth" disabled>Test Both</button>
+          <button data-test="click" data-i18n="click" disabled>Click</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="liveState">Live State</h2>
+        <div class="visual-grid">
+          <div class="sticks">
+            <div class="stick-wrap">
+              <div class="stick" data-i18n-title="leftStickHelp" title="Left stick position">
+                <div class="knob" id="leftKnob"></div>
+              </div>
+              <div id="leftStickText">L 2048, 2048</div>
+            </div>
+            <div class="stick-wrap">
+              <div class="stick" data-i18n-title="rightStickHelp" title="Right stick position">
+                <div class="knob" id="rightKnob"></div>
+              </div>
+              <div id="rightStickText">R 2048, 2048</div>
+            </div>
+            <div class="imu-box-wrap">
+              <div class="imu-scene" data-i18n-title="motion3dHelp" title="3D motion visualization from accelerometer and gyro">
+                <div class="motion-cube" id="imuBox">
+                  <div class="cube-face cube-front"></div>
+                  <div class="cube-face cube-back"></div>
+                  <div class="cube-face cube-right"></div>
+                  <div class="cube-face cube-left"></div>
+                  <div class="cube-face cube-top"></div>
+                  <div class="cube-face cube-bottom"></div>
+                </div>
+              </div>
+              <div id="imuText">ACC/GYR</div>
+            </div>
+          </div>
+          <div class="axis-list">
+            <div class="axis-line"><span>ACC X</span><div class="axis-bar"><div class="axis-fill" id="accelXFill"></div></div><span class="axis-value" id="accelXValue">0</span></div>
+            <div class="axis-line"><span>ACC Y</span><div class="axis-bar"><div class="axis-fill" id="accelYFill"></div></div><span class="axis-value" id="accelYValue">0</span></div>
+            <div class="axis-line"><span>ACC Z</span><div class="axis-bar"><div class="axis-fill" id="accelZFill"></div></div><span class="axis-value" id="accelZValue">0</span></div>
+            <div class="axis-line"><span>GYR X</span><div class="axis-bar"><div class="axis-fill" id="gyroXFill"></div></div><span class="axis-value" id="gyroXValue">0</span></div>
+            <div class="axis-line"><span>GYR Y</span><div class="axis-bar"><div class="axis-fill" id="gyroYFill"></div></div><span class="axis-value" id="gyroYValue">0</span></div>
+            <div class="axis-line"><span>GYR Z</span><div class="axis-bar"><div class="axis-fill" id="gyroZFill"></div></div><span class="axis-value" id="gyroZValue">0</span></div>
+          </div>
+        </div>
+        <h2 data-i18n="deviceLog">Device Log</h2>
+        <div class="log" id="log"></div>
+        <div class="raw-command">
+          <input id="rawCommand" type="text" value="usb status">
+          <button id="sendRawBtn" data-i18n="send" disabled>Send</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const REPORT_ID = 0x7f;
+    const NINTENDO_INPUT_REPORT_ID = 0x05;
+    const VENDOR_ID = 0x057e;
+    const PRODUCT_ID = 0x2069;
+    const SET_MAGIC = "Y7HID1";
+    const REPLY_MAGIC = "Y7HRS1";
+    const USB_POLL_MS = 1000;
+    const MOTION_SMOOTHING = 0.45;
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const I18N = {
+      en: {
+        appTitle: "NS2Pro USB Tuner",
+        noDevice: "No device selected",
+        live: "Live",
+        connect: "Connect",
+        reuse: "Use Existing",
+        refresh: "Refresh",
+        connection: "Connection",
+        connected: "Connected",
+        disconnected: "Disconnected",
+        input: "Input",
+        rumble: "Rumble",
+        haptics: "Haptics",
+        scalePercent: "Scale percent",
+        holdMs: "Hold ms",
+        tickMs: "Tick ms",
+        stopPackets: "Stop packets",
+        reportHz: "Report Hz",
+        settings: "Settings",
+        display: "Display",
+        rawUsb: "Raw USB",
+        parseInput: "Parse Input",
+        apply: "Apply",
+        save: "Save",
+        rumbleOn: "Rumble On",
+        rumbleOff: "Rumble Off",
+        stop: "Stop",
+        testLeft: "Test Left",
+        testRight: "Test Right",
+        testBoth: "Test Both",
+        click: "Click",
+        liveState: "Live State",
+        deviceLog: "Device Log",
+        send: "Send",
+        mounted: "Mounted",
+        target: "Target",
+        actual: "Actual",
+        mode: "Mode",
+        rawMode: "Raw",
+        parsedMode: "Parsed",
+        usbInput: "Input",
+        fwReports: "FW Reports",
+        rawFrames: "Raw frames",
+        parsedFrames: "Parsed frames",
+        hidOut: "HID OUT",
+        enabled: "Enabled",
+        active: "Active",
+        writes: "Writes",
+        errors: "Errors",
+        valid: "Valid",
+        kind: "Kind",
+        leftShort: "L",
+        rightShort: "R",
+        motionActive: "Motion active",
+        motionIdle: "Motion idle",
+        parse: "Parse",
+        webhidRequired: "WebHID requires Chrome or Edge on localhost/https",
+        noApprovedDevice: "No previously approved NS2Pro device",
+        deviceOpened: "Device opened",
+        deviceDisconnected: "Device disconnected",
+        connectFailed: "Connect failed",
+        reuseFailed: "Use existing failed",
+        liveStopped: "Live refresh stopped",
+        deviceNotOpen: "Device is not open",
+        commandBusy: "Command already running",
+        badReplyMagic: "Bad reply magic",
+        incompleteReply: "Incomplete reply",
+        liveHelp: "Read normal input reports in real time without filling the log.",
+        scaleHelp: "Rumble amplitude multiplier. 60 is the current default; higher values feel stronger.",
+        holdHelp: "How long one incoming rumble update is kept alive before timing out.",
+        tickHelp: "Interval for forwarding repeated HD rumble packets to the controller.",
+        stopPacketsHelp: "Number of zero-rumble packets sent when stopping, to clear lingering vibration.",
+        reportHzHelp: "Input report frequency sent to the host. Default is 250 Hz.",
+        displayHelp: "Disable the ST7789 status screen to reduce SPI refresh work.",
+        rawHelp: "Send the controller's raw FD2 input payload as USB report data.",
+        parseHelp: "Parse normal input reports in the web UI for live sticks and motion visuals. Actual Hz is still counted when this is off.",
+        leftStickHelp: "Left stick position",
+        rightStickHelp: "Right stick position",
+        motion3dHelp: "3D motion visualization from accelerometer and gyro"
+      },
+      zh: {
+        appTitle: "NS2Pro USB 调参",
+        noDevice: "未选择设备",
+        live: "实时",
+        connect: "连接",
+        reuse: "使用已授权设备",
+        refresh: "刷新",
+        connection: "连接",
+        connected: "已连接",
+        disconnected: "未连接",
+        input: "输入",
+        rumble: "震动",
+        haptics: "触觉",
+        scalePercent: "强度百分比",
+        holdMs: "保持毫秒",
+        tickMs: "转发间隔",
+        stopPackets: "停止包数量",
+        reportHz: "回报率 Hz",
+        settings: "设置",
+        display: "屏幕",
+        rawUsb: "USB 原始透传",
+        parseInput: "解析输入",
+        apply: "应用",
+        save: "保存",
+        rumbleOn: "开启震动",
+        rumbleOff: "关闭震动",
+        stop: "停止",
+        testLeft: "测试左侧",
+        testRight: "测试右侧",
+        testBoth: "测试双侧",
+        click: "点击感",
+        liveState: "实时状态",
+        deviceLog: "设备日志",
+        send: "发送",
+        mounted: "挂载",
+        target: "目标",
+        actual: "实际",
+        mode: "模式",
+        rawMode: "原始透传",
+        parsedMode: "解析重打包",
+        usbInput: "输入包",
+        fwReports: "固件包数",
+        rawFrames: "透传帧",
+        parsedFrames: "解析帧",
+        hidOut: "HID 输出",
+        enabled: "启用",
+        active: "活动",
+        writes: "写入",
+        errors: "错误",
+        valid: "有效",
+        kind: "类型",
+        leftShort: "左",
+        rightShort: "右",
+        motionActive: "体感活动",
+        motionIdle: "体感空闲",
+        parse: "解析",
+        webhidRequired: "WebHID 需要在 localhost/https 下使用 Chrome 或 Edge",
+        noApprovedDevice: "没有找到已授权的 NS2Pro 设备",
+        deviceOpened: "设备已打开",
+        deviceDisconnected: "设备已断开",
+        connectFailed: "连接失败",
+        reuseFailed: "使用已授权设备失败",
+        liveStopped: "实时刷新已停止",
+        deviceNotOpen: "设备未打开",
+        commandBusy: "命令正在执行",
+        badReplyMagic: "回复标记错误",
+        incompleteReply: "回复不完整",
+        liveHelp: "实时读取普通输入报告，不刷屏日志。",
+        scaleHelp: "震动强度倍率。60 是当前默认值，越高越强。",
+        holdHelp: "收到一次震动更新后，在超时前保持多久。",
+        tickHelp: "向手柄重复转发 HD 震动包的间隔。",
+        stopPacketsHelp: "停止震动时发送的零震动包数量，用于清掉残留震动。",
+        reportHzHelp: "发送给主机的输入报告频率，默认 250 Hz。",
+        displayHelp: "关闭 ST7789 状态屏，减少 SPI 刷新负担。",
+        rawHelp: "把手柄 FD2 原始输入负载直接作为 USB 报告数据发送。",
+        parseHelp: "在网页中解析普通输入报告，用于摇杆和体感动画；关闭后仍会统计实际 Hz。",
+        leftStickHelp: "左摇杆位置",
+        rightStickHelp: "右摇杆位置",
+        motion3dHelp: "由加速度计和陀螺仪驱动的 3D 体感展示"
+      }
+    };
+
+    let device = null;
+    let inputReportDevice = null;
+    let busy = false;
+    let usbTimer = null;
+    let usbBusy = false;
+    let renderFrame = null;
+    let latestUsbStatus = null;
+    let actualReportHz = null;
+    let inputReportCount = 0;
+    let inputRateSample = null;
+    let lastInputReportAt = 0;
+    let settingsDirty = false;
+    const neutralMotion = {
+      input_valid: false,
+      motion_valid: false,
+      kind: "UNK",
+      lx: 2048,
+      ly: 2048,
+      rx: 2048,
+      ry: 2048,
+      accel: [0, 0, 0],
+      gyro: [0, 0, 0],
+      motion_updates: 0
+    };
+    let latestMotion = { ...neutralMotion, accel: [...neutralMotion.accel], gyro: [...neutralMotion.gyro] };
+    let displayMotion = { ...neutralMotion, accel: [...neutralMotion.accel], gyro: [...neutralMotion.gyro] };
+    let lang = localStorage.getItem("ns2pro-tuner-lang") === "zh" ? "zh" : "en";
+
+    const els = {
+      langBtn: document.getElementById("langBtn"),
+      liveToggle: document.getElementById("liveToggle"),
+      connectBtn: document.getElementById("connectBtn"),
+      reuseBtn: document.getElementById("reuseBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      applyBtn: document.getElementById("applyBtn"),
+      saveBtn: document.getElementById("saveBtn"),
+      onBtn: document.getElementById("onBtn"),
+      offBtn: document.getElementById("offBtn"),
+      stopBtn: document.getElementById("stopBtn"),
+      sendRawBtn: document.getElementById("sendRawBtn"),
+      rawCommand: document.getElementById("rawCommand"),
+      log: document.getElementById("log"),
+      deviceLine: document.getElementById("deviceLine"),
+      connectionValue: document.getElementById("connectionValue"),
+      usbValue: document.getElementById("usbValue"),
+      inputValue: document.getElementById("inputValue"),
+      rumbleValue: document.getElementById("rumbleValue"),
+      scale: document.getElementById("scale"),
+      scaleNum: document.getElementById("scaleNum"),
+      hold: document.getElementById("hold"),
+      holdNum: document.getElementById("holdNum"),
+      tick: document.getElementById("tick"),
+      tickNum: document.getElementById("tickNum"),
+      stops: document.getElementById("stops"),
+      stopsNum: document.getElementById("stopsNum"),
+      rate: document.getElementById("rate"),
+      rateNum: document.getElementById("rateNum"),
+      displayToggle: document.getElementById("displayToggle"),
+      rawToggle: document.getElementById("rawToggle"),
+      parseToggle: document.getElementById("parseToggle"),
+      leftKnob: document.getElementById("leftKnob"),
+      rightKnob: document.getElementById("rightKnob"),
+      leftStickText: document.getElementById("leftStickText"),
+      rightStickText: document.getElementById("rightStickText"),
+      imuBox: document.getElementById("imuBox"),
+      imuText: document.getElementById("imuText"),
+      accelXFill: document.getElementById("accelXFill"),
+      accelYFill: document.getElementById("accelYFill"),
+      accelZFill: document.getElementById("accelZFill"),
+      gyroXFill: document.getElementById("gyroXFill"),
+      gyroYFill: document.getElementById("gyroYFill"),
+      gyroZFill: document.getElementById("gyroZFill"),
+      accelXValue: document.getElementById("accelXValue"),
+      accelYValue: document.getElementById("accelYValue"),
+      accelZValue: document.getElementById("accelZValue"),
+      gyroXValue: document.getElementById("gyroXValue"),
+      gyroYValue: document.getElementById("gyroYValue"),
+      gyroZValue: document.getElementById("gyroZValue")
+    };
+
+    function t(key) {
+      return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+    }
+
+    function applyLanguage() {
+      document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+      document.title = t("appTitle");
+      els.langBtn.textContent = lang === "zh" ? "EN" : "中文";
+      for (const node of document.querySelectorAll("[data-i18n]")) {
+        node.textContent = t(node.dataset.i18n);
+      }
+      for (const node of document.querySelectorAll("[data-i18n-title]")) {
+        node.title = t(node.dataset.i18nTitle);
+      }
+      setConnectedState(Boolean(device && device.opened));
+      renderUsbPanel();
+      if (els.parseToggle.checked) {
+        updateMotionPanel(latestMotion);
+      } else {
+        renderParseOffInputPanel();
+      }
+    }
+
+    function appendLog(text) {
+      const stamp = new Date().toLocaleTimeString();
+      els.log.textContent = `[${stamp}] ${text}\n` + els.log.textContent;
+    }
+
+    function setConnectedState(isConnected) {
+      els.connectionValue.textContent = isConnected ? t("connected") : t("disconnected");
+      els.connectionValue.className = `value ${isConnected ? "ok" : "bad"}`;
+      els.deviceLine.textContent = isConnected && device
+        ? `${device.productName || "NS2Pro"} (${device.vendorId.toString(16)}:${device.productId.toString(16)})`
+        : t("noDevice");
+
+      if (!isConnected) {
+        latestUsbStatus = null;
+        actualReportHz = null;
+        inputReportCount = 0;
+        inputRateSample = null;
+        lastInputReportAt = 0;
+        latestMotion = { ...neutralMotion, accel: [...neutralMotion.accel], gyro: [...neutralMotion.gyro] };
+        renderUsbPanel();
+        els.inputValue.textContent = "-";
+        els.rumbleValue.textContent = "-";
+      }
+
+      for (const button of document.querySelectorAll("button")) {
+        if (button.id === "connectBtn" || button.id === "reuseBtn" || button.id === "langBtn") continue;
+        button.disabled = !isConnected;
+      }
+    }
+
+    function bindPair(range, number) {
+      const sync = (from, to) => {
+        to.value = from.value;
+      };
+      range.addEventListener("input", () => sync(range, number));
+      number.addEventListener("input", () => sync(number, range));
+    }
+
+    bindPair(els.scale, els.scaleNum);
+    bindPair(els.hold, els.holdNum);
+    bindPair(els.tick, els.tickNum);
+    bindPair(els.stops, els.stopsNum);
+    bindPair(els.rate, els.rateNum);
+    for (const toggle of [els.displayToggle, els.rawToggle, els.parseToggle]) {
+      toggle.addEventListener("change", () => {
+        settingsDirty = true;
+        if (toggle === els.parseToggle && !toggle.checked) {
+          renderParseOffInputPanel();
+        }
+      });
+    }
+
+    function hasMagic(data, base) {
+      if (data.length < base + REPLY_MAGIC.length) return false;
+      for (let i = 0; i < REPLY_MAGIC.length; i++) {
+        if (data[base + i] !== REPLY_MAGIC.charCodeAt(i)) return false;
+      }
+      return true;
+    }
+
+    async function sendCommand(command, options = {}) {
+      if (!device || !device.opened) throw new Error(t("deviceNotOpen"));
+      if (busy) throw new Error(t("commandBusy"));
+      busy = true;
+      try {
+        const payload = new Uint8Array(63);
+        const body = encoder.encode(SET_MAGIC + command.trim());
+        payload.set(body.slice(0, payload.length));
+        await device.sendFeatureReport(REPORT_ID, payload);
+
+        let total = -1;
+        let received = 0;
+        let result = new Uint8Array(1024);
+
+        for (let attempt = 0; attempt < 32; attempt++) {
+          const view = await device.receiveFeatureReport(REPORT_ID);
+          const data = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+          const base = hasMagic(data, 1) && data[0] === REPORT_ID ? 1 : 0;
+          if (!hasMagic(data, base)) {
+            throw new Error(t("badReplyMagic"));
+          }
+
+          total = data[base + 6] | (data[base + 7] << 8);
+          const offset = data[base + 8] | (data[base + 9] << 8);
+          const chunkLen = data[base + 10];
+          if (total > result.length) {
+            const grown = new Uint8Array(total);
+            grown.set(result);
+            result = grown;
+          }
+          if (chunkLen > 0) {
+            result.set(data.slice(base + 11, base + 11 + chunkLen), offset);
+            received = Math.max(received, offset + chunkLen);
+          }
+          if (total >= 0 && received >= total) break;
+        }
+
+        if (total < 0 || received < total) {
+          throw new Error(t("incompleteReply"));
+        }
+
+        const text = decoder.decode(result.slice(0, total));
+        if (options.log !== false) {
+          appendLog(`> ${command}\n${text}`);
+        }
+        try {
+          return JSON.parse(text);
+        } catch {
+          return { ok: false, raw: text };
+        }
+      } finally {
+        busy = false;
+      }
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function lerp(current, target, alpha) {
+      return current + (target - current) * alpha;
+    }
+
+    function numberOr(value, fallback) {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : fallback;
+    }
+
+    function formatHz(value) {
+      if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+      return value >= 100 ? value.toFixed(0) : value.toFixed(1);
+    }
+
+    function renderParseOffInputPanel() {
+      els.inputValue.innerHTML = [
+        `${t("parse")}: <span class="warn">false</span>`,
+        `${t("live")}: ${formatHz(actualReportHz)} Hz`,
+        `${t("usbInput")}: ${inputReportCount}`
+      ].join("<br>");
+    }
+
+    function normalizeVector(value) {
+      return Array.isArray(value)
+        ? [numberOr(value[0], 0), numberOr(value[1], 0), numberOr(value[2], 0)]
+        : [0, 0, 0];
+    }
+
+    function normalizeMotion(data) {
+      return {
+        ...neutralMotion,
+        ...data,
+        input_valid: Boolean(data.input_valid),
+        motion_valid: Boolean(data.motion_valid),
+        lx: numberOr(data.lx, 2048),
+        ly: numberOr(data.ly, 2048),
+        rx: numberOr(data.rx, 2048),
+        ry: numberOr(data.ry, 2048),
+        accel: normalizeVector(data.accel),
+        gyro: normalizeVector(data.gyro)
+      };
+    }
+
+    function byteAt(view, offset) {
+      return offset >= 0 && offset < view.byteLength ? view.getUint8(offset) : 0;
+    }
+
+    function int16At(view, offset) {
+      return offset >= 0 && offset + 1 < view.byteLength ? view.getInt16(offset, true) : 0;
+    }
+
+    function unpack12Pair(view, offset) {
+      const b0 = byteAt(view, offset);
+      const b1 = byteAt(view, offset + 1);
+      const b2 = byteAt(view, offset + 2);
+      return [
+        b0 | ((b1 & 0x0f) << 8),
+        ((b1 >> 4) & 0x0f) | (b2 << 4)
+      ];
+    }
+
+    function parseNormalInputReport(event) {
+      if (event.reportId !== NINTENDO_INPUT_REPORT_ID || !event.data || event.data.byteLength < 16) {
+        return null;
+      }
+
+      const view = event.data;
+      const left = unpack12Pair(view, 10);
+      const right = unpack12Pair(view, 13);
+      const buttons = byteAt(view, 4) |
+        (byteAt(view, 5) << 8) |
+        (byteAt(view, 6) << 16) |
+        (byteAt(view, 7) << 24);
+
+      const motionOffset = 48;
+      const motionRaw = [];
+      for (let i = 0; i < 12 && motionOffset + i < view.byteLength; i++) {
+        motionRaw.push(byteAt(view, motionOffset + i));
+      }
+      const motionValid = motionRaw.length === 12 && motionRaw.some(value => value !== 0);
+      const accel = motionValid
+        ? [int16At(view, motionOffset), int16At(view, motionOffset + 2), int16At(view, motionOffset + 4)]
+        : [0, 0, 0];
+      const gyro = motionValid
+        ? [int16At(view, motionOffset + 6), int16At(view, motionOffset + 8), int16At(view, motionOffset + 10)]
+        : [0, 0, 0];
+
+      return {
+        ok: true,
+        profile: "ns2pro",
+        input_valid: true,
+        kind: "USB05",
+        len: view.byteLength + 1,
+        updates: inputReportCount,
+        seq: byteAt(view, 0),
+        buttons,
+        lx: left[0],
+        ly: left[1],
+        rx: right[0],
+        ry: right[1],
+        motion_valid: motionValid,
+        motion_updates: inputReportCount,
+        motion_kind: "USB05",
+        motion_len: view.byteLength + 1,
+        motion_offset: motionOffset + 1,
+        accel,
+        gyro,
+        motion_raw: motionRaw.map(value => value.toString(16).padStart(2, "0")).join("")
+      };
+    }
+
+    function noteInputReport() {
+      inputReportCount++;
+      const now = performance.now();
+      lastInputReportAt = now;
+      if (!inputRateSample) {
+        inputRateSample = { time: now, count: inputReportCount };
+        return;
+      }
+
+      const elapsed = now - inputRateSample.time;
+      if (elapsed >= 500) {
+        const delta = inputReportCount - inputRateSample.count;
+        actualReportHz = delta * 1000 / elapsed;
+        inputRateSample = { time: now, count: inputReportCount };
+        renderUsbPanel();
+      }
+    }
+
+    function handleInputReport(event) {
+      if (!els.liveToggle.checked) return;
+      if (event.reportId !== NINTENDO_INPUT_REPORT_ID) return;
+      noteInputReport();
+      if (!els.parseToggle.checked) {
+        renderParseOffInputPanel();
+        return;
+      }
+      const parsed = parseNormalInputReport(event);
+      if (!parsed) return;
+      parsed.updates = inputReportCount;
+      parsed.motion_updates = inputReportCount;
+      updateMotionPanel(parsed);
+    }
+
+    function attachInputReports(target) {
+      if (inputReportDevice === target) return;
+      if (inputReportDevice) {
+        inputReportDevice.removeEventListener("inputreport", handleInputReport);
+      }
+      inputReportDevice = target;
+      if (inputReportDevice) {
+        inputReportDevice.addEventListener("inputreport", handleInputReport);
+      }
+    }
+
+    function updatePair(range, number, value) {
+      if (typeof value !== "number") return;
+      if (document.activeElement === range || document.activeElement === number) return;
+      range.value = number.value = value;
+    }
+
+    function setStick(knob, textEl, label, x, y) {
+      const cx = 2048;
+      const span = 2048;
+      const nx = clamp((Number(x) - cx) / span, -1, 1);
+      const ny = clamp((cx - Number(y)) / span, -1, 1);
+      knob.style.transform = `translate(calc(-50% + ${nx * 34}px), calc(-50% + ${ny * 34}px))`;
+      textEl.textContent = `${label} ${Math.round(Number(x) || 0)}, ${Math.round(Number(y) || 0)}`;
+    }
+
+    function setAxis(fill, valueEl, value, limit) {
+      const numeric = Number(value) || 0;
+      const pct = clamp(Math.abs(numeric) / limit, 0, 1) * 50;
+      fill.style.left = numeric < 0 ? `${50 - pct}%` : "50%";
+      fill.style.width = `${pct}%`;
+      fill.style.background = numeric < 0 ? "var(--warn)" : "var(--accent)";
+      valueEl.textContent = String(Math.round(numeric));
+    }
+
+    function stepMotion() {
+      displayMotion.lx = lerp(displayMotion.lx, latestMotion.lx, MOTION_SMOOTHING);
+      displayMotion.ly = lerp(displayMotion.ly, latestMotion.ly, MOTION_SMOOTHING);
+      displayMotion.rx = lerp(displayMotion.rx, latestMotion.rx, MOTION_SMOOTHING);
+      displayMotion.ry = lerp(displayMotion.ry, latestMotion.ry, MOTION_SMOOTHING);
+      for (let i = 0; i < 3; i++) {
+        displayMotion.accel[i] = lerp(displayMotion.accel[i], latestMotion.accel[i], MOTION_SMOOTHING);
+        displayMotion.gyro[i] = lerp(displayMotion.gyro[i], latestMotion.gyro[i], MOTION_SMOOTHING);
+      }
+      displayMotion.input_valid = latestMotion.input_valid;
+      displayMotion.motion_valid = latestMotion.motion_valid;
+    }
+
+    function renderMotionVisuals() {
+      stepMotion();
+      setStick(els.leftKnob, els.leftStickText, t("leftShort"), displayMotion.lx, displayMotion.ly);
+      setStick(els.rightKnob, els.rightStickText, t("rightShort"), displayMotion.rx, displayMotion.ry);
+
+      const accel = displayMotion.accel;
+      const gyro = displayMotion.gyro;
+      setAxis(els.accelXFill, els.accelXValue, accel[0], 16000);
+      setAxis(els.accelYFill, els.accelYValue, accel[1], 16000);
+      setAxis(els.accelZFill, els.accelZValue, accel[2], 16000);
+      setAxis(els.gyroXFill, els.gyroXValue, gyro[0], 12000);
+      setAxis(els.gyroYFill, els.gyroYValue, gyro[1], 12000);
+      setAxis(els.gyroZFill, els.gyroZValue, gyro[2], 12000);
+
+      const ax = accel[0];
+      const ay = accel[1];
+      const az = accel[2];
+      const accelMagnitude = Math.hypot(ax, ay, az);
+      const gravityPitch = accelMagnitude > 500
+        ? clamp(Math.atan2(ay, az || 1) * 180 / Math.PI, -55, 55)
+        : 0;
+      const gravityRoll = accelMagnitude > 500
+        ? clamp(Math.atan2(-ax, Math.hypot(ay, az)) * 180 / Math.PI, -55, 55)
+        : 0;
+      const gyroPitch = clamp(gyro[0] / 12000, -1, 1) * 24;
+      const gyroRoll = clamp(gyro[1] / 12000, -1, 1) * 24;
+      const gyroYaw = clamp(gyro[2] / 12000, -1, 1) * 24;
+      els.imuBox.style.transform =
+        `rotateX(${gravityPitch + gyroPitch}deg) rotateY(${gravityRoll + gyroRoll}deg) rotateZ(${gyroYaw}deg)`;
+      els.imuText.textContent = `${displayMotion.motion_valid ? t("motionActive") : t("motionIdle")} | ${formatHz(actualReportHz)} Hz`;
+    }
+
+    function startRenderLoop() {
+      if (renderFrame !== null) return;
+      const render = () => {
+        renderMotionVisuals();
+        renderFrame = requestAnimationFrame(render);
+      };
+      renderFrame = requestAnimationFrame(render);
+    }
+
+    function renderUsbPanel() {
+      const data = latestUsbStatus || {};
+      els.usbValue.innerHTML = [
+        `${t("mounted")}: <span class="${data.usb_mounted ? "ok" : "warn"}">${Boolean(data.usb_mounted)}</span>`,
+        `${t("target")}: ${data.report_rate_hz ?? "-"} Hz`,
+        `${t("actual")}: ${formatHz(actualReportHz)} Hz`,
+        `${t("mode")}: ${data.usb_raw_passthrough === false ? t("parsedMode") : t("rawMode")}`,
+        `${t("usbInput")}: ${inputReportCount}`,
+        `${t("fwReports")}: ${data.reports_sent ?? "-"}`,
+        `${t("rawFrames")}: ${data.raw_passthrough_reports ?? "-"}`,
+        `${t("parsedFrames")}: ${data.parsed_reports ?? "-"}`,
+        `${t("hidOut")}: ${data.hid_out ?? "-"}`
+      ].join("<br>");
+    }
+
+    function updateUsbPanel(data) {
+      latestUsbStatus = data;
+      renderUsbPanel();
+      els.rumbleValue.innerHTML = [
+        `${t("enabled")}: <span class="${data.rumble_enabled ? "ok" : "warn"}">${Boolean(data.rumble_enabled)}</span>`,
+        `${t("active")}: ${Boolean(data.rumble_active)}`,
+        `${t("writes")}: ${data.rumble_writes ?? "-"} / ${t("errors")}: ${data.rumble_errors ?? "-"}`
+      ].join("<br>");
+      const scale = data.rumble_scale_percent ?? data.scale_percent;
+      const hold = data.rumble_hold_ms ?? data.hold_ms;
+      const tick = data.rumble_tick_ms ?? data.tick_ms;
+      const stops = data.rumble_stop_packets ?? data.stop_packets;
+      if (typeof scale === "number") {
+        updatePair(els.scale, els.scaleNum, scale);
+        updatePair(els.hold, els.holdNum, hold);
+        updatePair(els.tick, els.tickNum, tick);
+        updatePair(els.stops, els.stopsNum, stops);
+      }
+      if (typeof data.report_rate_hz === "number") {
+        updatePair(els.rate, els.rateNum, data.report_rate_hz);
+      }
+      if (!settingsDirty) {
+        if (typeof data.display_enabled === "boolean") els.displayToggle.checked = data.display_enabled;
+        if (typeof data.usb_raw_passthrough === "boolean") els.rawToggle.checked = data.usb_raw_passthrough;
+        if (typeof data.web_parse_reports === "boolean") els.parseToggle.checked = data.web_parse_reports;
+      }
+    }
+
+    function updateMotionPanel(data) {
+      latestMotion = normalizeMotion(data);
+      const accel = Array.isArray(data.accel) ? data.accel.join(", ") : "-";
+      const gyro = Array.isArray(data.gyro) ? data.gyro.join(", ") : "-";
+      els.inputValue.innerHTML = [
+        `${t("valid")}: <span class="${data.input_valid ? "ok" : "warn"}">${Boolean(data.input_valid)}</span>`,
+        `${t("kind")}: ${data.kind ?? "-"}`,
+        `${t("live")}: ${formatHz(actualReportHz)} Hz`,
+        `${t("leftShort")}: ${data.lx ?? "-"}, ${data.ly ?? "-"}`,
+        `${t("rightShort")}: ${data.rx ?? "-"}, ${data.ry ?? "-"}`,
+        `ACC: ${accel}`,
+        `GYR: ${gyro}`
+      ].join("<br>");
+    }
+
+    async function pollUsbStatus(options = {}) {
+      const usb = await sendCommand("usb status", options);
+      updateUsbPanel(usb);
+      return usb;
+    }
+
+    async function pollMotionStatus(options = {}) {
+      const motion = await sendCommand("motion status", options);
+      updateMotionPanel(motion);
+      return motion;
+    }
+
+    async function refreshAll(options = {}) {
+      await pollUsbStatus(options);
+      if (els.parseToggle.checked) {
+        await pollMotionStatus(options);
+      } else {
+        renderParseOffInputPanel();
+      }
+    }
+
+    function stopLive() {
+      if (usbTimer) {
+        clearInterval(usbTimer);
+        usbTimer = null;
+      }
+      usbBusy = false;
+    }
+
+    function handleLiveError(err) {
+      appendLog(`${t("liveStopped")}: ${err.message}`);
+      stopLive();
+      setConnectedState(false);
+    }
+
+    async function liveUsbTick() {
+      if (usbBusy || busy) return;
+      usbBusy = true;
+      try {
+        await pollUsbStatus({ log: false });
+      } catch (err) {
+        handleLiveError(err);
+      } finally {
+        usbBusy = false;
+      }
+    }
+
+    function startLive() {
+      stopLive();
+      if (!device || !device.opened || !els.liveToggle.checked) return;
+      startRenderLoop();
+      liveUsbTick();
+      usbTimer = setInterval(liveUsbTick, USB_POLL_MS);
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function waitForIdle(timeoutMs = 350) {
+      const started = performance.now();
+      while (busy && performance.now() - started < timeoutMs) {
+        await sleep(10);
+      }
+    }
+
+    async function runManual(action) {
+      const shouldResume = Boolean(device && device.opened && els.liveToggle.checked);
+      stopLive();
+      await waitForIdle();
+      try {
+        return await action();
+      } finally {
+        if (shouldResume && device && device.opened) {
+          startLive();
+        }
+      }
+    }
+
+    function resetInputCounters() {
+      actualReportHz = null;
+      inputReportCount = 0;
+      inputRateSample = null;
+      lastInputReportAt = 0;
+      latestMotion = { ...neutralMotion, accel: [...neutralMotion.accel], gyro: [...neutralMotion.gyro] };
+      displayMotion = { ...neutralMotion, accel: [...neutralMotion.accel], gyro: [...neutralMotion.gyro] };
+      renderUsbPanel();
+    }
+
+    async function openDevice(selected) {
+      if (device && device !== selected) {
+        attachInputReports(null);
+      }
+      device = selected;
+      if (!device.opened) await device.open();
+      attachInputReports(device);
+      resetInputCounters();
+      settingsDirty = false;
+      setConnectedState(true);
+      appendLog(t("deviceOpened"));
+      await refreshAll();
+      startLive();
+    }
+
+    els.connectBtn.addEventListener("click", async () => {
+      try {
+        if (!("hid" in navigator)) {
+          throw new Error(t("webhidRequired"));
+        }
+        const devices = await navigator.hid.requestDevice({
+          filters: [{ vendorId: VENDOR_ID, productId: PRODUCT_ID }]
+        });
+        if (devices.length === 0) return;
+        await openDevice(devices[0]);
+      } catch (err) {
+        appendLog(`${t("connectFailed")}: ${err.message}`);
+      }
+    });
+
+    els.reuseBtn.addEventListener("click", async () => {
+      try {
+        if (!("hid" in navigator)) {
+          throw new Error(t("webhidRequired"));
+        }
+        const devices = await navigator.hid.getDevices();
+        const match = devices.find(item => item.vendorId === VENDOR_ID && item.productId === PRODUCT_ID);
+        if (!match) throw new Error(t("noApprovedDevice"));
+        await openDevice(match);
+      } catch (err) {
+        appendLog(`${t("reuseFailed")}: ${err.message}`);
+      }
+    });
+
+    els.langBtn.addEventListener("click", () => {
+      lang = lang === "zh" ? "en" : "zh";
+      localStorage.setItem("ns2pro-tuner-lang", lang);
+      applyLanguage();
+    });
+
+    els.liveToggle.addEventListener("change", () => {
+      if (els.liveToggle.checked) {
+        startLive();
+      } else {
+        stopLive();
+      }
+    });
+    els.refreshBtn.addEventListener("click", () => {
+      runManual(() => refreshAll()).catch(err => appendLog(err.message));
+    });
+    els.applyBtn.addEventListener("click", async () => {
+      runManual(async () => {
+        await sendCommand(`rumble tune ${els.scaleNum.value} ${els.holdNum.value} ${els.tickNum.value} ${els.stopsNum.value}`);
+        await sendCommand(`usb rate ${els.rateNum.value}`);
+        await sendCommand(`usb raw ${els.rawToggle.checked ? "on" : "off"}`);
+        await sendCommand(`display ${els.displayToggle.checked ? "on" : "off"}`);
+        await sendCommand(`web parse ${els.parseToggle.checked ? "on" : "off"}`);
+        settingsDirty = false;
+        await refreshAll();
+      }).catch(err => appendLog(err.message));
+    });
+    els.saveBtn.addEventListener("click", () => {
+      runManual(async () => {
+        await sendCommand("settings save");
+        settingsDirty = false;
+        await refreshAll();
+      }).catch(err => appendLog(err.message));
+    });
+    els.onBtn.addEventListener("click", () => {
+      runManual(async () => {
+        await sendCommand("rumble on");
+        await refreshAll();
+      }).catch(err => appendLog(err.message));
+    });
+    els.offBtn.addEventListener("click", () => {
+      runManual(async () => {
+        await sendCommand("rumble off");
+        await refreshAll();
+      }).catch(err => appendLog(err.message));
+    });
+    els.stopBtn.addEventListener("click", () => {
+      runManual(async () => {
+        await sendCommand("rumble stop");
+        await refreshAll();
+      }).catch(err => appendLog(err.message));
+    });
+    els.sendRawBtn.addEventListener("click", () => {
+      runManual(async () => {
+        const data = await sendCommand(els.rawCommand.value);
+        if ("usb_mounted" in data || "scale_percent" in data || "report_rate_hz" in data) updateUsbPanel(data);
+        if ("input_valid" in data) updateMotionPanel(data);
+      }).catch(err => appendLog(err.message));
+    });
+
+    for (const button of document.querySelectorAll("[data-test]")) {
+      button.addEventListener("click", () => {
+        runManual(async () => {
+          await sendCommand(`rumble test ${button.dataset.test}`);
+          await refreshAll();
+        }).catch(err => appendLog(err.message));
+      });
+    }
+
+    navigator.hid?.addEventListener("disconnect", event => {
+      if (device && event.device === device) {
+        attachInputReports(null);
+        device = null;
+        stopLive();
+        setConnectedState(false);
+        appendLog(t("deviceDisconnected"));
+      }
+    });
+
+    applyLanguage();
+    setConnectedState(false);
+    startRenderLoop();
+  </script>
+</body>
+</html>
