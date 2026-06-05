@@ -58,6 +58,7 @@ body，用来对比数据，但这不等价于手柄原生 USB 直连时的报�
 - `tools/serve-ns2-webhid-tuner.js`：本地 WebUI 静态服务器。
 - `tools/ns2pro-bridge-pico2w.uf2`：当前本地最新 UF2 固件产物。
 - `docs/PROJECT_NOTES.md`：当前决策、已知问题和后续计划。
+- `docs/ESP32S3_HANDOFF.md`：ESP32-S3 实验分支交接说明。
 - `NOTICE.md`：上游项目来源、借鉴位置和第三方协议说明。
 - `LICENSES/`：保留的上游项目协议文本。
 

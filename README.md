@@ -64,6 +64,8 @@ Optional:
 - `tools/serve-ns2-webhid-tuner.js` - local static server for the tuner.
 - `tools/ns2pro-bridge-pico2w.uf2` - latest local UF2 firmware artifact.
 - `docs/PROJECT_NOTES.md` - current decisions, known issues, and roadmap.
+- `docs/ESP32S3_HANDOFF.md` - handoff notes for the experimental ESP32-S3
+  branch.
 - `NOTICE.md` - upstream attribution and third-party license notes.
 - `LICENSES/` - copied upstream license texts for referenced projects.
 

@@ -262,6 +262,8 @@ Before publishing to GitHub:
 - `src/ns2/ns2_state.cpp` - persistent runtime settings.
 - `src/ns2/ns2_display.cpp` - optional ST7789 display.
 - `tools/ns2-webhid-tuner.html` - WebHID configuration and visualization page.
+- `docs/ESP32S3_HANDOFF.md` - handoff notes for the experimental ESP32-S3
+  branch.
 
 ## 10. Non-Goals for the Current Stage
 
