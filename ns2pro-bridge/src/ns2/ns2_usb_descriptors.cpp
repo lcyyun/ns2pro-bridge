@@ -1,5 +1,8 @@
 #include "ns2_usb.h"
 
+// USB identity, report IDs, and vendor/status interface shape are based on
+// NS2Pro/Switch 2 Pro USB experiments from y700-switch2-pro-bridge.
+
 #include <cstring>
 
 #include "tusb.h"

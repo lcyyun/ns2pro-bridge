@@ -82,7 +82,7 @@ endif ()
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(ns2pro-pico2w-bridge C CXX ASM)
+project(ns2pro-bridge C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
@@ -180,7 +180,7 @@ if(WAKE_DEBUG)
 endif()
 set(VERSION "dev" CACHE STRING "Program version string")
 
-pico_set_program_name(ds5-bridge "ns2pro-pico2w-bridge")
+pico_set_program_name(ds5-bridge "ns2pro-bridge")
 pico_set_program_version(ds5-bridge "${VERSION}")
 
 # Modify the below lines to enable/disable output over UART/USB

@@ -1,5 +1,8 @@
 #include "ns2_input.h"
 
+// FD2 stick/button/motion parsing follows NS2Pro report-layout notes from
+// y700-switch2-pro-bridge, with Pico-specific state handling added here.
+
 #include <cstdio>
 #include <cstring>
 

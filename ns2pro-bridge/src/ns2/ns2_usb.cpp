@@ -1,5 +1,8 @@
 #include "ns2_usb.h"
 
+// Nintendo-style USB report mapping and HID OUT rumble forwarding are informed
+// by y700-switch2-pro-bridge protocol experiments and adapted for TinyUSB.
+
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>

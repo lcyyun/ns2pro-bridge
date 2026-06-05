@@ -1,7 +1,6 @@
-# NS2Pro Pico2W Bridge
+# NS2Pro Bridge
 
-`NS2Pro Pico2W Bridge` 是一个基于 Raspberry Pi Pico 2 W 的 NS2Pro / Switch 2 Pro 风格手柄桥接固件项目。
-
+`NS2Pro Bridge` 是一个基于 Raspberry Pi Pico 2 W 的 NS2Pro / Switch 2 Pro 风格手柄桥接固件项目。
 当前目标是把 NS2Pro 手柄通过蓝牙连接到 Pico 2 W，再由 Pico 2 W 模拟 Nintendo 风格 USB HID 设备输出给主机。
 
 ## 当前功能
@@ -22,7 +21,8 @@
 - `tools/serve-ns2-webhid-tuner.js`：本地 WebUI 静态服务器。
 - `tools/ds5-bridge-ns2pro.uf2`：当前最新测试固件。
 - `docs/NS2PRO_PICO2W_REQUIREMENTS.md`：需求文档和阶段记录。
-- `README_DS5Dongle_ORIGINAL.md`：保留的上游 DS5Dongle README。
+- `NOTICE.md`：上游项目来源、借鉴位置和第三方协议说明。
+- `LICENSES/`：复制保留的上游项目协议文本。
 
 ## 构建
 
@@ -66,3 +66,11 @@ node tools\serve-ns2-webhid-tuner.js
 5. 确认效果没问题后，再点击 `保存`。
 
 需要对照原始输入时，再打开 `USB 原始透传` 并点击 `应用`。
+
+## 来源和协议
+
+本项目基于 MIT 协议的 DS5Dongle Pico 固件代码整理而来，并参考了 Apache-2.0 协议的
+y700-switch2-pro-bridge 项目中关于 NS2Pro / Switch 2 Pro 的协议分析。
+
+发布到 GitHub 或重新分发固件前，请保留 `NOTICE.md` 和 `LICENSES/`。本仓库主协议为 MIT，
+除非具体文件或捆绑的第三方组件另有说明。

@@ -1,5 +1,8 @@
 #include "ns2_gatt.h"
 
+// NS2Pro BLE UUIDs and initialization payloads are derived from protocol
+// research in y700-switch2-pro-bridge, then adapted to BTstack on Pico 2 W.
+
 #include <cstdio>
 #include <cstring>
 
