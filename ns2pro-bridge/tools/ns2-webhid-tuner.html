@@ -493,13 +493,13 @@
           <input id="displayToggle" type="checkbox" checked>
           <span data-i18n="display">Display</span>
         </label>
-        <label class="toggle" data-i18n-title="rawHelp" title="Send the controller's raw FD2 input payload as USB report data.">
-          <input id="rawToggle" type="checkbox" checked>
-          <span data-i18n="rawUsb">Raw USB</span>
+        <label class="toggle" data-i18n-title="rawHelp" title="Experimental diagnostic mode. Raw FD2 passthrough may not match the controller's native USB stick range.">
+          <input id="rawToggle" type="checkbox">
+          <span data-i18n="rawUsb">Raw USB (Diag)</span>
         </label>
-        <label class="toggle" data-i18n-title="parseHelp" title="Parse normal input reports in the web UI for live sticks and motion visuals. Actual Hz is still counted when this is off.">
+        <label class="toggle" data-i18n-title="parseHelp" title="Parse normal input reports in the web UI for live sticks and motion visuals. This does not change USB output mode.">
           <input id="parseToggle" type="checkbox" checked>
-          <span data-i18n="parseInput">Parse Input</span>
+          <span data-i18n="parseInput">Live Visuals</span>
         </label>
         <div class="actions">
           <button id="applyBtn" class="primary" data-i18n="apply" disabled>Apply</button>
@@ -597,8 +597,8 @@
         reportHz: "Report Hz",
         settings: "Settings",
         display: "Display",
-        rawUsb: "Raw USB",
-        parseInput: "Parse Input",
+        rawUsb: "Raw USB (Diag)",
+        parseInput: "Live Visuals",
         apply: "Apply",
         save: "Save",
         rumbleOn: "Rumble On",
@@ -615,8 +615,8 @@
         target: "Target",
         actual: "Actual",
         mode: "Mode",
-        rawMode: "Raw",
-        parsedMode: "Parsed",
+        rawMode: "Raw diagnostic",
+        parsedMode: "Parsed output",
         usbInput: "Input",
         fwReports: "FW Reports",
         rawFrames: "Raw frames",
@@ -650,9 +650,9 @@
         tickHelp: "Interval for forwarding repeated HD rumble packets to the controller.",
         stopPacketsHelp: "Number of zero-rumble packets sent when stopping, to clear lingering vibration.",
         reportHzHelp: "Input report frequency sent to the host. Default is 250 Hz.",
-        displayHelp: "Disable the ST7789 status screen to reduce SPI refresh work.",
-        rawHelp: "Send the controller's raw FD2 input payload as USB report data.",
-        parseHelp: "Parse normal input reports in the web UI for live sticks and motion visuals. Actual Hz is still counted when this is off.",
+        displayHelp: "Enable the ST7789 status screen. Keep it off for best input timing.",
+        rawHelp: "Experimental diagnostic mode. Raw FD2 passthrough may not match the controller's native USB stick range.",
+        parseHelp: "Parse normal input reports in the web UI for live sticks and motion visuals. This does not change USB output mode.",
         leftStickHelp: "Left stick position",
         rightStickHelp: "Right stick position",
         motion3dHelp: "3D motion visualization from accelerometer and gyro"
@@ -677,8 +677,8 @@
         reportHz: "回报率 Hz",
         settings: "设置",
         display: "屏幕",
-        rawUsb: "USB 原始透传",
-        parseInput: "解析输入",
+        rawUsb: "原始透传(诊断)",
+        parseInput: "实时可视化",
         apply: "应用",
         save: "保存",
         rumbleOn: "开启震动",
@@ -695,8 +695,8 @@
         target: "目标",
         actual: "实际",
         mode: "模式",
-        rawMode: "原始透传",
-        parsedMode: "解析重打包",
+        rawMode: "原始诊断",
+        parsedMode: "解析输出",
         usbInput: "输入包",
         fwReports: "固件包数",
         rawFrames: "透传帧",
@@ -730,9 +730,9 @@
         tickHelp: "向手柄重复转发 HD 震动包的间隔。",
         stopPacketsHelp: "停止震动时发送的零震动包数量，用于清掉残留震动。",
         reportHzHelp: "发送给主机的输入报告频率，默认 250 Hz。",
-        displayHelp: "关闭 ST7789 状态屏，减少 SPI 刷新负担。",
-        rawHelp: "把手柄 FD2 原始输入负载直接作为 USB 报告数据发送。",
-        parseHelp: "在网页中解析普通输入报告，用于摇杆和体感动画；关闭后仍会统计实际 Hz。",
+        displayHelp: "开启 ST7789 状态屏。为了获得最好输入时序，建议保持关闭。",
+        rawHelp: "实验性诊断模式。FD2 原始透传不一定等同于手柄 USB 直插，摇杆边界可能不正确。",
+        parseHelp: "在网页中解析普通输入报告，用于摇杆和体感动画；不会改变 USB 输出模式。",
         leftStickHelp: "左摇杆位置",
         rightStickHelp: "右摇杆位置",
         motion3dHelp: "由加速度计和陀螺仪驱动的 3D 体感展示"
