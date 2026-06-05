@@ -1,8 +1,7 @@
 # ns2pro-bridge
 
 `ns2pro-bridge` 是一个基于 Raspberry Pi Pico 2 W 的固件项目。它通过 BLE
-连接 NS2Pro / Switch 2 Pro 风格手柄，然后把 Pico 2 W 模拟成 Nintendo
-风格 USB HID 手柄输出给主机。
+连接 NS2Pro 手柄，然后把 Pico 2 W 模拟成 Nintendo 风格 USB HID 手柄输出给主机。
 
 当前目标是先做好单手柄桥接，把已经测试稳定的路径固定下来，而不是一次性追求
 完整协议覆盖。
@@ -43,7 +42,7 @@ body，用来对比数据，但这不等价于手柄原生 USB 直连时的报�
 必需：
 
 - Raspberry Pi Pico 2 W。
-- NS2Pro / Switch 2 Pro 风格手柄。
+- NS2Pro 手柄。
 - 一根 USB 线，用于供电、烧录、USB HID 输出和 WebHID 调参。
 - Chrome 或 Edge 浏览器，用于打开 WebHID 调参页。
 
@@ -136,7 +135,7 @@ node tools\serve-ns2-webhid-tuner.js
 ## 来源和协议
 
 本项目基于 MIT 协议的 DS5Dongle Pico 固件整理而来，并参考了 Apache-2.0
-协议的 y700-switch2-pro-bridge 项目中关于 NS2Pro / Switch 2 Pro 的协议分析。
+协议的 y700-switch2-pro-bridge 项目中关于 NS2Pro 的协议分析。
 
 发布到 GitHub 或重新分发固件前，请保留 `NOTICE.md` 和 `LICENSES/`。本仓库
 主协议为 MIT，除非具体文件或捆绑的第三方组件另有说明。
