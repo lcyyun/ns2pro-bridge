@@ -56,7 +56,7 @@ body，用来对比数据，但这不等价于手柄原生 USB 直连时的报�
 - `src/ns2/`：NS2Pro BLE、GATT、输入解析、USB HID、屏幕、配置和状态代码。
 - `tools/ns2-webhid-tuner.html`：WebHID 调参页面。
 - `tools/serve-ns2-webhid-tuner.js`：本地 WebUI 静态服务器。
-- `tools/ds5-bridge-ns2pro.uf2`：当前本地最新 UF2 固件产物。
+- `tools/ns2pro-bridge-pico2w.uf2`：当前本地最新 UF2 固件产物。
 - `docs/PROJECT_NOTES.md`：当前决策、已知问题和后续计划。
 - `NOTICE.md`：上游项目来源、借鉴位置和第三方协议说明。
 - `LICENSES/`：保留的上游项目协议文本。
@@ -69,10 +69,10 @@ Windows 下使用项目自带脚本：
 powershell.exe -ExecutionPolicy Bypass -File tools\build-windows.ps1
 ```
 
-NS2Pro 固件使用 `ENABLE_NS2PRO=ON` 构建。当前 UF2 固件位置：
+构建脚本默认生成 NS2Pro Pico 2 W 固件。当前 UF2 固件位置：
 
 ```text
-tools\ds5-bridge-ns2pro.uf2
+tools\ns2pro-bridge-pico2w.uf2
 ```
 
 ## 烧录
@@ -80,7 +80,7 @@ tools\ds5-bridge-ns2pro.uf2
 让 Pico 2 W 进入 BOOTSEL 模式，然后把 UF2 复制到 `RPI-RP2` 磁盘。
 
 ```powershell
-Copy-Item -LiteralPath tools\ds5-bridge-ns2pro.uf2 -Destination E:\ -Force
+Copy-Item -LiteralPath tools\ns2pro-bridge-pico2w.uf2 -Destination E:\ -Force
 ```
 
 其中 `E:\` 需要替换成你电脑上实际出现的 BOOTSEL 盘符。

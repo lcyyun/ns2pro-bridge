@@ -62,7 +62,7 @@ Optional:
   status code.
 - `tools/ns2-webhid-tuner.html` - browser-based WebHID tuner.
 - `tools/serve-ns2-webhid-tuner.js` - local static server for the tuner.
-- `tools/ds5-bridge-ns2pro.uf2` - latest local UF2 firmware artifact.
+- `tools/ns2pro-bridge-pico2w.uf2` - latest local UF2 firmware artifact.
 - `docs/PROJECT_NOTES.md` - current decisions, known issues, and roadmap.
 - `NOTICE.md` - upstream attribution and third-party license notes.
 - `LICENSES/` - copied upstream license texts for referenced projects.
@@ -75,11 +75,11 @@ On Windows, use the bundled build script:
 powershell.exe -ExecutionPolicy Bypass -File tools\build-windows.ps1
 ```
 
-The NS2Pro firmware is built with `ENABLE_NS2PRO=ON`. The current UF2 artifact
-is kept at:
+The build script defaults to the NS2Pro Pico 2 W firmware. The current UF2
+artifact is kept at:
 
 ```text
-tools\ds5-bridge-ns2pro.uf2
+tools\ns2pro-bridge-pico2w.uf2
 ```
 
 ## Flash
@@ -88,7 +88,7 @@ Put the Pico 2 W into BOOTSEL mode, then copy the UF2 file to the mounted
 `RPI-RP2` drive.
 
 ```powershell
-Copy-Item -LiteralPath tools\ds5-bridge-ns2pro.uf2 -Destination E:\ -Force
+Copy-Item -LiteralPath tools\ns2pro-bridge-pico2w.uf2 -Destination E:\ -Force
 ```
 
 Replace `E:\` with the actual BOOTSEL drive letter.

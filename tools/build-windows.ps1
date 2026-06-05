@@ -1,23 +1,23 @@
 <#
 .SYNOPSIS
-    One-command builder for the Pico2W DualSense 5 Bridge firmware on Windows 11
+    One-command builder for the Pico 2 W NS2Pro Bridge firmware on Windows 11
     (no WSL required).
 
 .DESCRIPTION
     Installs every prerequisite (winget where possible, portable downloads as a
     fallback), fetches the pinned Raspberry Pi Pico SDK + TinyUSB, initialises
     this repo's submodules, then configures and builds the firmware with CMake +
-    Ninja. The resulting ds5-bridge.uf2 is copied next to this script and onto
-    your Desktop.
+    Ninja. The resulting UF2 is copied next to this script and onto your
+    Desktop. The default NS2Pro build is named ns2pro-bridge-pico2w.uf2.
 
     The script is idempotent: re-running it skips anything already installed or
     downloaded.
 
 .PARAMETER Variant
-    standard (default) - normal firmware.
+    ns2pro (default)  - NS2Pro BLE to Nintendo-style USB HID bridge.
+    standard          - inherited DS5Dongle firmware.
     debug              - adds -DENABLE_SERIAL=ON -DENABLE_VERBOSE=ON.
     wake               - adds -DENABLE_WAKE_HID=ON (Wake-on-PS build).
-    ns2pro             - NS2 Pro / Switch 2 Pro BLE auto-connect MVP.
 
 .PARAMETER Clean
     Delete the variant's build directory before configuring.
@@ -38,7 +38,7 @@
 
 .EXAMPLE
     # From inside a cloned repo:
-    powershell -ExecutionPolicy Bypass -File tools\build-windows.ps1 -Variant wake
+    powershell -ExecutionPolicy Bypass -File tools\build-windows.ps1
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\build-windows.ps1 -Repo https://github.com/youruser/DS5Dongle.git -Ref master
@@ -47,7 +47,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('standard', 'debug', 'wake', 'ns2pro')]
-    [string]$Variant = 'standard',
+    [string]$Variant = 'ns2pro',
     [switch]$Clean,
     # Project to build when this script is run standalone (not from inside a
     # checkout). Override to build a fork.
@@ -484,7 +484,7 @@ Info "Configuring: cmake $($cmakeArgs -join ' ')"
 & cmake @cmakeArgs
 if ($LASTEXITCODE -ne 0) { Die 'CMake configure failed.' }
 
-Info 'Building ds5-bridge...'
+Info 'Building firmware...'
 & cmake --build $buildDir --target ds5-bridge
 if ($LASTEXITCODE -ne 0) { Die 'Build failed.' }
 
@@ -492,7 +492,11 @@ if ($LASTEXITCODE -ne 0) { Die 'Build failed.' }
 $uf2 = Join-Path $buildDir 'ds5-bridge.uf2'
 if (-not (Test-Path $uf2)) { Die "Expected $uf2 was not produced." }
 
-$outName = if ($Variant -eq 'standard') { 'ds5-bridge.uf2' } else { "ds5-bridge-$Variant.uf2" }
+$outName = switch ($Variant) {
+    'ns2pro' { 'ns2pro-bridge-pico2w.uf2' }
+    'standard' { 'ds5-bridge.uf2' }
+    default { "ds5-bridge-$Variant.uf2" }
+}
 $nextToScript = Join-Path $PSScriptRoot $outName
 Copy-Item $uf2 $nextToScript -Force
 $desktop = [Environment]::GetFolderPath('Desktop')

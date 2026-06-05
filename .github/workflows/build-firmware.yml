@@ -129,17 +129,19 @@ jobs:
           fi
           git -C "$PICO_SDK_PATH/lib/tinyusb" checkout --detach "$TINYUSB_REF"
 
-      - name: Build standard firmware
+      - name: Build NS2Pro Pico 2 W firmware
         run: |
           VERSION_ARG=()
           [ -n "${FW_VER:-}" ] && VERSION_ARG=(-DVERSION="$FW_VER")
-          cmake -S . -B build/standard -G Ninja \
+          cmake -S . -B build/ns2pro -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DPICO_SDK_PATH="$PICO_SDK_PATH" \
+            -DENABLE_NS2PRO=ON \
+            -DENABLE_SERIAL=ON \
             "${VERSION_ARG[@]}"
-          cmake --build build/standard --target ds5-bridge
+          cmake --build build/ns2pro --target ds5-bridge
           mkdir -p artifacts
-          cp build/standard/ds5-bridge.uf2 "artifacts/ds5-bridge${{ inputs.asset_suffix }}.uf2"
+          cp build/ns2pro/ds5-bridge.uf2 "artifacts/ns2pro-bridge-pico2w${{ inputs.asset_suffix }}.uf2"
 
       - name: Build Debug firmware
         run: |
@@ -188,7 +190,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          path: artifacts/ds5-bridge${{ inputs.asset_suffix }}.uf2
+          path: artifacts/ns2pro-bridge-pico2w${{ inputs.asset_suffix }}.uf2
           archive: false
           if-no-files-found: error
 
