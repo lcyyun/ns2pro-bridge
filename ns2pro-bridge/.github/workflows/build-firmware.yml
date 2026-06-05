@@ -33,6 +33,11 @@ on:
         required: false
         type: string
         default: ""
+      debug:
+        description: Also build and upload the inherited debug UF2
+        required: false
+        type: boolean
+        default: true
       picow:
         description: Also build the Pico W UF2 (-DPICO_W_BUILD=ON)
         required: false
@@ -144,6 +149,7 @@ jobs:
           cp build/ns2pro/ds5-bridge.uf2 "artifacts/ns2pro-bridge-pico2w${{ inputs.asset_suffix }}.uf2"
 
       - name: Build Debug firmware
+        if: inputs.debug
         run: |
           VERSION_ARG=()
           [ -n "${FW_VER:-}" ] && VERSION_ARG=(-DVERSION="$FW_VER")
@@ -195,6 +201,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Debug UF2 artifact
+        if: inputs.debug
         uses: actions/upload-artifact@v7
         with:
           path: artifacts/ds5-bridge-debug${{ inputs.asset_suffix }}.uf2
@@ -202,6 +209,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload PicoW UF2 artifact
+        if: inputs.picow
         uses: actions/upload-artifact@v7
         with:
           path: artifacts/ds5-bridge-picow${{ inputs.asset_suffix }}.uf2

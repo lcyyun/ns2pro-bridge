@@ -1,6 +1,9 @@
 name: Build release firmware
 
 on:
+  push:
+    tags:
+      - "v*"
   release:
     types:
       - published
@@ -9,11 +12,32 @@ permissions:
   contents: write
 
 jobs:
+  ensure-release:
+    name: Ensure GitHub Release exists
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release for pushed tag
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME already exists."
+          else
+            gh release create "$TAG_NAME" \
+              --title "$TAG_NAME" \
+              --notes "NS2Pro Bridge Pico 2 W firmware release." \
+              --verify-tag
+          fi
+
   build:
     name: Build and upload release UF2
+    needs: ensure-release
     uses: ./.github/workflows/build-firmware.yml
     with:
-      ref: ${{ github.event.release.tag_name }}
-      version: ${{ github.event.release.tag_name }}
-      asset_suffix: -${{ github.event.release.tag_name }}
-      upload_tag: ${{ github.event.release.tag_name }}
+      ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+      version: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+      asset_suffix: ""
+      upload_tag: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+      debug: false
