@@ -7,10 +7,11 @@ device.
 The current tested path focuses on Pico 2 W:
 
 - BLE auto connection and manual pairing flow for the NS2Pro controller.
-- Nintendo USB HID presentation with raw FD2 passthrough and parsed-report mode.
-- ST7789 240x240 status display support.
+- Nintendo USB HID presentation with parsed-report output by default and raw
+  FD2 passthrough kept as an experimental diagnostic mode.
+- Optional ST7789 240x240 status display support, disabled by default.
 - WebHID tuning page with English / Chinese UI.
-- Runtime controls for display, raw USB passthrough, parsed WebUI input,
+- Runtime controls for display, raw USB diagnostics, WebUI live visualizer,
   report rate, and rumble tuning.
 - HD rumble forwarding experiments.
 
@@ -54,21 +55,25 @@ Current behavior:
 
 - `Apply` changes settings immediately for the current boot.
 - `Save` writes settings to flash so they survive power loss.
-- `Raw USB` on means raw FD2 passthrough.
-- `Raw USB` off means parsed report mode with joystick normalization enabled.
+- `Raw USB (Diag)` off means parsed report mode with the currently tested
+  correct stick range.
+- `Raw USB (Diag)` on sends the FD2 payload directly for comparison only; it
+  may not match the controller's native USB stick range.
+- `Live Visuals` only controls WebUI animation parsing and does not change USB
+  output mode.
 
 ## Current Test Notes
 
 The current preferred joystick test is:
 
-1. Turn `Raw USB` off in the WebUI.
+1. Keep `Raw USB (Diag)` off in the WebUI.
 2. Click `Apply`.
 3. Confirm `parsed_reports` increases and `raw_passthrough_reports` stops increasing.
 4. Test stick edge distribution and in-game full-run behavior.
 5. Click `Save` only after the setting is known good.
 
-If raw passthrough is needed for comparison, turn `Raw USB` back on and click
-`Apply`.
+If raw passthrough is needed for comparison, turn `Raw USB (Diag)` on and click
+`Apply`, then turn it back off for normal use.
 
 ## Attribution and License
 

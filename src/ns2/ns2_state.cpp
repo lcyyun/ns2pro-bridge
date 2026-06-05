@@ -160,7 +160,8 @@ void ns2_config_reset_defaults() {
     config.body.saved_addr_type = 0;
     config.body.last_success_boot_counter = 0;
     config.body.scan_policy = static_cast<uint8_t>(Ns2ScanPolicy::SavedFirstThenAnyCandidate);
-    config.body.runtime_flags = 0;
+    config.body.runtime_flags = CONFIG_FLAG_DISPLAY_DISABLED |
+                                CONFIG_FLAG_USB_RAW_DISABLED;
     config.body.report_rate_hz = CONFIG_DEFAULT_REPORT_RATE_HZ;
     config.body.rumble_scale_percent = CONFIG_DEFAULT_RUMBLE_SCALE_PERCENT;
     config.body.rumble_hold_ms = CONFIG_DEFAULT_RUMBLE_HOLD_MS;
