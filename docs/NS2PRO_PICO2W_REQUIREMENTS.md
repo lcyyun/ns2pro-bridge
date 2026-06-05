@@ -7,8 +7,7 @@ Target hardware: Raspberry Pi Pico 2 W
 
 ## 1. Project Goal
 
-This project bridges one NS2Pro / Switch 2 Pro style controller to a host over
-USB:
+This project bridges one NS2Pro controller to a host over USB:
 
 ```text
 NS2Pro controller -> BLE -> Pico 2 W -> Nintendo-style USB HID -> host
@@ -38,7 +37,7 @@ These decisions are considered current unless later tests prove otherwise:
 
 ### BLE and Controller Initialization
 
-- Scans for NS2Pro / Switch 2 Pro style BLE controllers.
+- Scans for NS2Pro BLE controllers.
 - Connects to a matching controller.
 - Runs the GATT discovery and controller initialization sequence.
 - Subscribes to input notifications.

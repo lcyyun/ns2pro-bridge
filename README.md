@@ -1,8 +1,8 @@
 # ns2pro-bridge
 
 `ns2pro-bridge` is a Raspberry Pi Pico 2 W firmware project that connects an
-NS2Pro / Switch 2 Pro style controller over BLE and exposes it to the host as a
-Nintendo-style USB HID controller.
+NS2Pro controller over BLE and exposes it to the host as a Nintendo-style USB
+HID controller.
 
 The project currently targets a single controller and prioritizes a stable,
 tested bridge path over full protocol completeness.
@@ -47,7 +47,7 @@ profile to flash.
 Required:
 
 - Raspberry Pi Pico 2 W.
-- NS2Pro / Switch 2 Pro style controller.
+- NS2Pro controller.
 - USB cable for power, flashing, USB HID output, and WebHID configuration.
 - Chrome or Edge for the WebHID tuner.
 
@@ -144,7 +144,7 @@ Planned or likely future work:
 ## Attribution and License
 
 This project is based on the MIT-licensed DS5Dongle Pico firmware and uses
-NS2Pro / Switch 2 Pro protocol knowledge from the Apache-2.0-licensed
+NS2Pro protocol knowledge from the Apache-2.0-licensed
 y700-switch2-pro-bridge project. See `NOTICE.md` and `LICENSES/` before
 publishing or redistributing builds.
 
