@@ -1,404 +1,274 @@
-# Pico 2 W NS2 Pro Auto-Connect Requirements
+# NS2Pro Pico 2 W Bridge Requirements
 
-Date: 2026-06-03
-Status: Draft
-Target project base: DS5Dongle
+Date: 2026-06-05
+Status: Active project notes
+Project name: `ns2pro-bridge`
+Target hardware: Raspberry Pi Pico 2 W
 
-## 1. Background
+## 1. Project Goal
 
-The current DS5Dongle project already provides a clean Pico 2 W firmware base with TinyUSB, BTstack Classic, UF2 flashing, configuration over HID feature reports, and a mature reconnect-oriented receiver flow for DualSense controllers.
-
-The y700-switch2-pro-bridge project has a working ESP32-S3 implementation for NS2 Pro / Switch 2 Pro controller bridging, but its BLE connection logic is ESP-IDF / NimBLE specific and cannot be copied directly to Pico 2 W. The useful pieces are the protocol knowledge, BLE UUIDs, initialization sequence, report parsing, and future USB report mapping.
-
-This document defines the first Pico 2 W milestone only:
-
-Pico 2 W automatically discovers, connects, reconnects, and monitors one NS2 Pro controller over BLE.
-
-## 2. MVP Scope
-
-### In Scope
-
-- Pico 2 W firmware boots and initializes BTstack BLE Central mode.
-- Firmware scans for likely NS2 Pro / Switch 2 Pro BLE advertisements.
-- Firmware automatically connects to a matching controller.
-- Firmware persists the last successful controller address.
-- Firmware reconnects to the saved controller after reboot.
-- Firmware retries connection after failure or disconnect.
-- Firmware subscribes to the controller input notify characteristic.
-- Firmware confirms that live input notifications are being received.
-- Firmware exposes enough status for debugging through USB serial or HID feature command.
-- Firmware has LED status patterns for idle, scanning, connecting, connected, and error.
-
-### Out of Scope for MVP
-
-- DS5 and NS2 Pro combined firmware.
-- Simultaneous multi-controller support.
-- Full USB gamepad output to Windows / Steam.
-- Nintendo USB identity emulation.
-- Rumble forwarding.
-- Gyro mapping validation.
-- Audio, voice, microphone, or headset features.
-- Web configuration UI.
-- Windows Manager integration.
-
-## 3. Success Criteria
-
-The MVP is considered successful when all of the following are true:
-
-1. With the NS2 Pro in pairing mode, Pico 2 W finds it without manual address entry.
-2. Pico 2 W connects to the controller and stores its BLE address.
-3. After power cycling Pico 2 W, it reconnects to the same controller when the controller is awake or advertising.
-4. If the controller disconnects, Pico 2 W returns to reconnect mode automatically.
-5. The firmware reports `connected`, `live_notify=true`, and an increasing notify counter.
-6. Manual replug is not required for normal reconnection.
-7. The BLE connection remains stable for at least 30 minutes.
-8. Reconnection after controller sleep/wake succeeds within a reasonable time, target under 15 seconds once the controller advertises.
-
-## 4. Hardware Requirements
-
-### Required
-
-- Raspberry Pi Pico 2 W.
-- USB cable for power, flashing, and debug/status output.
-- NS2 Pro / Switch 2 Pro controller.
-- Windows PC for flashing and log observation.
-
-### Not Required for MVP
-
-- ESP32-S3.
-- PSRAM.
-- External Bluetooth dongle.
-- Second USB port.
-- Battery or portable enclosure.
-
-## 5. Firmware Architecture
-
-The MVP should be implemented as a new NS2 Pro profile inside the DS5Dongle codebase, not as a direct port of ESP32-S3 firmware.
-
-Recommended modules:
+This project bridges one NS2Pro / Switch 2 Pro style controller to a host over
+USB:
 
 ```text
-src/ns2/ns2_ble.h
-src/ns2/ns2_ble.cpp
-src/ns2/ns2_gatt.h
-src/ns2/ns2_gatt.cpp
-src/ns2/ns2_state.h
-src/ns2/ns2_state.cpp
-src/ns2/ns2_status.h
-src/ns2/ns2_status.cpp
+NS2Pro controller -> BLE -> Pico 2 W -> Nintendo-style USB HID -> host
 ```
 
-Existing DS5 modules should remain untouched except for build wiring and shared status/LED hooks.
+The project is not trying to become a universal controller framework yet. The
+current priority is a stable single-controller firmware with a useful WebHID
+tuner and enough documentation to continue development safely.
 
-## 6. BLE Requirements
+## 2. Current Decision Summary
 
-### Scan Behavior
+These decisions are considered current unless later tests prove otherwise:
 
-- Start BLE active scan automatically after boot.
-- Use a scan interval and window suitable for responsive discovery without excessive load.
-- Recognize likely NS2 Pro candidates by one or more of:
-  - advertised name
-  - appearance
-  - service UUIDs
-  - manufacturer data
-  - address seen during prior successful connection
-- Keep a small candidate cache with address, address type, RSSI, name, and match reason.
+- Keep the BLE connection path simple and stable.
+- Treat long-press pairing/manual wake as the reliable connection path for now.
+- Do not spend more time on complex automatic reconnect experiments until better
+  NS2Pro-specific information is available.
+- Use parsed FD2 input and repack it into Nintendo-style USB reports.
+- Keep raw FD2-to-USB passthrough disabled by default.
+- Treat raw passthrough as diagnostic only.
+- Keep the ST7789 display disabled by default because high-frequency display
+  refresh can affect runtime behavior.
+- Use WebHID as the main configuration and tuning interface.
+- Keep serial debug logs available for development.
 
-### Connect Behavior
+## 3. Implemented Features
 
-- If a saved target exists, attempt direct reconnect first.
-- If direct reconnect fails, fall back to scanning for the saved target.
-- If no saved target exists, scan and connect to the first strong NS2 Pro candidate.
-- On successful connection, persist address and address type.
-- Do not require the user to type or copy a BLE address.
+### BLE and Controller Initialization
 
-### Retry Behavior
+- Scans for NS2Pro / Switch 2 Pro style BLE controllers.
+- Connects to a matching controller.
+- Runs the GATT discovery and controller initialization sequence.
+- Subscribes to input notifications.
+- Tracks connection state, notification counters, and recent errors.
 
-- Retry must be continuous while auto-connect is enabled.
-- A failed connection attempt must not permanently stop the reconnect loop.
-- A disconnect event must return the firmware to reconnect mode.
-- Use backoff to avoid tight retry loops.
+Known limitation:
 
-Recommended retry schedule:
+- Automatic reconnect is not considered solved. The current firmware should
+  preserve the stable connection flow, but reconnect behavior may still require
+  controller wake/pairing-button interaction depending on controller state.
+
+### FD2 Input Parsing
+
+Current FD2 parsing:
+
+- buttons from `data[4..7]`;
+- left stick from packed 12-bit data at `data[10..12]`;
+- right stick from packed 12-bit data at `data[13..15]`;
+- accel and gyro from the motion block starting at `data[48]`.
+
+Current interpretation:
+
+- These offsets match the tested reference implementation used during
+  development.
+- The stick boundary issue is more likely caused by wireless-vs-USB range
+  semantics and output mapping, not by a simple FD2 offset error.
+
+### USB HID Output
+
+The stable output path is:
 
 ```text
-0-30 seconds: retry every 2 seconds
-30-120 seconds: retry every 5 seconds
-after 120 seconds: retry every 10 seconds
+BLE FD2 input -> parse -> center/deadzone handling -> range mapping -> USB report
 ```
 
-### GATT Behavior
-
-- Discover required services and characteristics after connection.
-- Discover CCCD descriptors where needed.
-- Subscribe to the known input notify characteristic.
-- Run the NS2 Pro initialization sequence required to start live reports.
-- Track whether live notify packets are actually received.
-- Treat `connected but no notify` as a partial failure and expose it in status.
-
-## 7. State Machine
-
-The firmware should use an explicit state machine.
+Raw USB passthrough path:
 
 ```text
-BOOT
-  -> BLE_INIT
-  -> IDLE
-  -> SCANNING
-  -> CONNECTING
-  -> DISCOVERING
-  -> SUBSCRIBING
-  -> INITIALIZING_CONTROLLER
-  -> CONNECTED_LIVE
-  -> DISCONNECTED
-  -> SCANNING
+BLE FD2 input -> copied into USB report body
 ```
 
-Failure transitions:
+Raw passthrough is kept only for diagnostics. It may not match the controller's
+native USB behavior and can produce incorrect stick outer-boundary results.
+
+### WebHID Tuner
+
+The WebHID tuner currently supports:
+
+- connect / use existing HID device;
+- English and Chinese UI;
+- connection, input, USB, and rumble status;
+- live stick and motion visualization;
+- 3D cube motion visualization;
+- target and actual report-rate display;
+- rumble parameter tuning;
+- display enable/disable;
+- raw USB diagnostic enable/disable;
+- settings apply and flash save.
+
+Expected settings behavior:
+
+- `Apply` changes runtime settings for the current boot.
+- `Save` writes settings to flash.
+- Defaults should be conservative and stable.
+
+### ST7789 Display
+
+The firmware supports an optional ST7789 240x240 SPI display.
+
+Current decision:
+
+- Display is off by default.
+- It is useful for basic status, but high-frequency updates are not worth the
+  performance cost.
+- Future display work should prefer compact, low-rate status updates.
+
+## 4. Current Defaults
+
+Default runtime settings:
 
 ```text
-CONNECTING failed -> BACKOFF -> SCANNING
-DISCOVERING failed -> DISCONNECT -> BACKOFF -> SCANNING
-SUBSCRIBING failed -> DISCONNECT -> BACKOFF -> SCANNING
-INITIALIZING_CONTROLLER failed -> DISCONNECT -> BACKOFF -> SCANNING
-CONNECTED_LIVE disconnect -> BACKOFF -> SCANNING
-CONNECTED but notify timeout -> DISCONNECT -> BACKOFF -> SCANNING
+display_enabled = false
+usb_raw_passthrough = false
+web_parse_reports = true
+rumble_enabled = true
+report_rate_hz = 250
 ```
 
-## 8. Persistent Configuration
-
-The MVP needs a small persistent config block.
-
-Required fields:
+Default rumble parameters:
 
 ```text
-magic
-version
-crc32
-auto_connect_enabled
-saved_addr
-saved_addr_type
-last_success_unix_or_boot_counter
-scan_policy
+scale_percent = 60
+hold_ms = 140
+tick_ms = 30
+stop_packets = 3
 ```
 
-Default values:
+## 5. Recommended Test Method
 
-```text
-auto_connect_enabled = true
-saved_addr = empty
-scan_policy = saved-first-then-any-candidate
-```
+### Basic Connection Test
 
-Config writes must be verified after flash programming.
+1. Flash the current UF2 to Pico 2 W.
+2. Power the NS2Pro controller and use the known reliable pairing/wake flow.
+3. Confirm the WebUI reports `Connected`.
+4. Confirm input reports are increasing.
+5. Test all buttons and sticks.
 
-## 9. Status and Debug Requirements
+### USB Output Test
 
-The firmware must provide a machine-readable status response.
+1. Open the WebHID tuner.
+2. Keep `Raw USB (Diag)` off.
+3. Click `Apply`.
+4. Confirm parsed reports are increasing.
+5. Test the controller in a game or controller tester.
+6. Save settings only after the behavior is known good.
 
-Minimum fields:
+### Stick Boundary Test
 
-```json
-{
-  "ok": true,
-  "profile": "ns2pro",
-  "ble_state": "connected_live",
-  "auto_connect": "on",
-  "saved_target": "aa:bb:cc:dd:ee:ff/0",
-  "candidate_count": 1,
-  "connected_addr": "aa:bb:cc:dd:ee:ff/0",
-  "rssi": -55,
-  "notify_count": 12345,
-  "notify_hz": 123,
-  "last_notify_age_ms": 4,
-  "connect_attempts": 3,
-  "disconnect_count": 1,
-  "last_error": ""
-}
-```
+1. Keep raw passthrough off.
+2. Slowly rotate each stick around the outer edge.
+3. Check that the reported outer boundary reaches the expected range.
+4. Check in-game behavior, especially whether full tilt always produces
+   full-speed movement.
+5. Record any directions where full tilt becomes walking or partial movement.
 
-Recommended commands:
+## 6. Known Issues and Current Understanding
 
-```text
-status
-ns2 scan
-ns2 reconnect
-ns2 disconnect
-ns2 forget
-ns2 auto on
-ns2 auto off
-ns2 candidates
-```
+### Automatic Reconnect
 
-For MVP, these commands may be exposed through USB serial. HID feature command support is optional.
+Automatic reconnect has not been proven reliable. Earlier experiments showed
+that some controller states do not advertise or reconnect in a simple way after
+sleep/disconnect.
 
-## 10. LED Requirements
+Current decision:
 
-Use Pico 2 W onboard LED for basic feedback.
+- Do not keep destabilizing the firmware for reconnect experiments.
+- Preserve the known-good connection path.
+- Revisit reconnect later only with better NS2Pro-specific evidence.
 
-```text
-off                    booting or disabled
-slow blink 1 Hz         scanning
-fast blink 4 Hz         connecting/discovering/subscribing
-solid on                connected and live notify active
-double blink repeating  connected but no live notify
-triple blink repeating  error/backoff
-```
+### Raw USB Passthrough
 
-## 11. Performance Requirements
+Raw passthrough can make the stick range worse. The current understanding is
+that a BLE FD2 payload is not necessarily equivalent to the controller's native
+wired USB report body.
 
-- BLE notify parser must avoid heap allocation in the hot path.
-- Input notify timestamp must be updated on every valid packet.
-- Status counters must be safe to read from the main loop.
-- BLE reconnect loop must not block TinyUSB tasks.
-- Firmware should remain responsive to status commands during scanning and reconnecting.
+Current decision:
 
-Target metrics:
+- Default raw passthrough off.
+- Keep it as a diagnostic switch.
+- Normal output should use parsed and repacked reports.
 
-```text
-initial discovery: under 30 seconds when controller is in pairing mode
-saved reconnect: under 15 seconds after controller advertises
-notify rate: record measured rate, expected around 100-130 Hz depending on controller behavior
-stable run: 30 minutes minimum without unintended disconnect
-```
+### Stick Outer Boundary
 
-## 12. Build Requirements
+Wireless stick range can differ from native USB range. The current firmware uses
+center calibration and fixed range expansion, which is stable but not as precise
+as a true outer-boundary calibration profile.
 
-The build should add a new variant:
+Observed problem:
 
-```text
-standard DS5 firmware: existing behavior
-ns2pro-connect firmware: NS2 Pro BLE auto-connect MVP
-```
+- In some games, pushing the stick fully in certain directions may cause the
+  character to walk instead of run.
 
-Suggested CMake option:
+Current theory:
 
-```text
--DENABLE_NS2PRO=ON
-```
+- Some directions do not reach the host's expected full-scale boundary after
+  wireless-to-USB mapping.
+- This is a mapping/calibration problem more than a basic FD2 parsing problem.
 
-The NS2 Pro variant must link BTstack BLE support. The existing DS5 firmware currently uses BTstack Classic. The first MVP should not try to enable DS5 and NS2 Pro at the same time.
+## 7. Future Calibration Plan
 
-## 13. Acceptance Test Plan
+The preferred future solution is a stick calibration flow in the WebHID tuner.
 
-### Test 1: First Pairing
+Suggested flow:
 
-1. Flash NS2 Pro Pico 2 W firmware.
-2. Put NS2 Pro controller into pairing mode.
-3. Power Pico 2 W.
-4. Confirm LED enters scanning state.
-5. Confirm Pico finds and connects.
-6. Confirm status shows `connected_live`.
-7. Confirm notify counter increases.
+1. Ask the user to release both sticks.
+2. Record neutral center values.
+3. Ask the user to rotate the left stick around the outer edge several times.
+4. Ask the user to rotate the right stick around the outer edge several times.
+5. Record observed maximum outer boundary data.
+6. Save calibration data to flash.
+7. Apply the calibration profile when generating USB reports.
 
-Pass condition:
+Possible implementation levels:
 
-```text
-connected_live=true
-notify_count increases for 60 seconds
-saved_target is non-empty
-```
+- Level 1: global stick scale factor.
+- Level 2: per-stick X/Y scale factors.
+- Level 3: per-angle outer-boundary table.
 
-### Test 2: Power Cycle Reconnect
+Preferred long-term approach:
 
-1. Keep controller available.
-2. Unplug Pico 2 W.
-3. Plug Pico 2 W again.
-4. Do not enter manual address.
-5. Confirm automatic reconnect.
+- Level 3, because the observed outer boundary may be irregular rather than a
+  simple circle or ellipse.
 
-Pass condition:
+Practical first implementation:
 
-```text
-Pico reconnects to saved controller without manual command.
-```
+- Start with Level 1 or Level 2 as a safe tuning feature.
+- Keep the data format extensible so Level 3 can be added later.
 
-### Test 3: Controller Sleep/Wake
+## 8. Release Checklist
 
-1. Connect successfully.
-2. Let controller sleep or manually power it off.
-3. Confirm firmware enters reconnect state.
-4. Wake controller.
-5. Confirm automatic reconnect.
+Before publishing to GitHub:
 
-Pass condition:
+- Keep `LICENSE`.
+- Keep `NOTICE.md`.
+- Keep `LICENSES/`.
+- Make sure DS5Dongle and y700-switch2-pro-bridge attribution remains clear.
+- Do not claim affiliation with Nintendo, Sony, Raspberry Pi, or other vendors.
+- Make sure generated build artifacts are intentional.
+- Verify default settings are stable:
+  - display off;
+  - raw passthrough off;
+  - parsed USB output on;
+  - settings save/load works.
 
-```text
-No Pico replug required.
-Reconnect succeeds after controller advertises.
-```
+## 9. Useful Files
 
-### Test 4: No Controller Present
+- `src/ns2/ns2_ble.cpp` - BLE connection flow.
+- `src/ns2/ns2_gatt.cpp` - GATT discovery and controller initialization.
+- `src/ns2/ns2_input.cpp` - FD2 input parsing and center handling.
+- `src/ns2/ns2_usb.cpp` - Nintendo-style USB report generation, rumble, WebHID
+  feature commands.
+- `src/ns2/ns2_state.cpp` - persistent runtime settings.
+- `src/ns2/ns2_display.cpp` - optional ST7789 display.
+- `tools/ns2-webhid-tuner.html` - WebHID configuration and visualization page.
 
-1. Power Pico 2 W with controller off.
-2. Confirm firmware keeps scanning/retrying.
-3. Confirm status commands still work.
+## 10. Non-Goals for the Current Stage
 
-Pass condition:
-
-```text
-No crash.
-No watchdog reset.
-Status remains readable.
-```
-
-### Test 5: Long Run
-
-1. Connect NS2 Pro.
-2. Leave connected for 30 minutes.
-3. Monitor notify count and disconnect count.
-
-Pass condition:
-
-```text
-No unintended disconnect.
-last_notify_age_ms remains low during active controller use.
-```
-
-## 14. Risks
-
-- Pico 2 W BTstack BLE Central support may require careful SDK configuration.
-- DS5Dongle currently uses Classic-only BTstack wiring, so BLE build wiring must be added.
-- NS2 Pro BLE initialization sequence may differ by controller firmware version.
-- Controller may not advertise continuously after sleep.
-- BLE notify parsing must be ported from ESP32 NimBLE code to BTstack callbacks.
-- Future USB Nintendo identity may require descriptor switching and host re-enumeration.
-
-## 15. Future Milestones
-
-After MVP passes:
-
-1. Add Nintendo USB HID output on Pico 2 W.
-2. Map NS2 Pro input reports to Nintendo/Switch Pro USB reports.
-3. Validate Steam recognition.
-4. Add rumble forwarding.
-5. Add gyro passthrough.
-6. Add DS5 / NS2 Pro profile selection.
-7. Add auto-detect mode with USB descriptor selected after controller type is known.
-8. Add web or HID feature configuration UI.
-
-## 16. Recommended Implementation Order
-
-1. Add `ENABLE_NS2PRO` build option.
-2. Add BLE stack wiring for Pico 2 W.
-3. Add NS2 state machine and LED states.
-4. Implement scan and candidate detection.
-5. Implement connect and persistent target save.
-6. Implement disconnect/retry/backoff.
-7. Implement GATT discovery.
-8. Implement notify subscription.
-9. Implement NS2 initialization writes.
-10. Implement status command.
-11. Run acceptance tests.
-
-## 17. MVP Definition
-
-The MVP does not need to make Windows see a gamepad.
-
-The MVP only needs to prove this:
-
-```text
-Pico 2 W can automatically find, connect, reconnect, and receive live packets from one NS2 Pro controller.
-```
-
-Once this is stable, USB gamepad output becomes the next milestone.
+- Multi-controller support.
+- Full protocol-perfect NS2Pro USB emulation.
+- Audio/headset support.
+- Making display output always-on.
+- Aggressive automatic reconnect experiments.
+- Replacing the current stable parsed-output path with raw passthrough.
