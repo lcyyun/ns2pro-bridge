@@ -1,4 +1,4 @@
-# NS2Pro Pico 2 W Bridge Requirements
+# NS2Pro Pico 2 W Bridge Project Notes
 
 Date: 2026-06-05
 Status: Active project notes

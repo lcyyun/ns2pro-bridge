@@ -63,8 +63,7 @@ Optional:
 - `tools/ns2-webhid-tuner.html` - browser-based WebHID tuner.
 - `tools/serve-ns2-webhid-tuner.js` - local static server for the tuner.
 - `tools/ds5-bridge-ns2pro.uf2` - latest local UF2 firmware artifact.
-- `docs/NS2PRO_PICO2W_REQUIREMENTS.md` - current requirements, decisions, and
-  roadmap.
+- `docs/PROJECT_NOTES.md` - current decisions, known issues, and roadmap.
 - `NOTICE.md` - upstream attribution and third-party license notes.
 - `LICENSES/` - copied upstream license texts for referenced projects.
 

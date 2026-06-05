@@ -57,7 +57,7 @@ body，用来对比数据，但这不等价于手柄原生 USB 直连时的报�
 - `tools/ns2-webhid-tuner.html`：WebHID 调参页面。
 - `tools/serve-ns2-webhid-tuner.js`：本地 WebUI 静态服务器。
 - `tools/ds5-bridge-ns2pro.uf2`：当前本地最新 UF2 固件产物。
-- `docs/NS2PRO_PICO2W_REQUIREMENTS.md`：当前需求、决策和后续计划。
+- `docs/PROJECT_NOTES.md`：当前决策、已知问题和后续计划。
 - `NOTICE.md`：上游项目来源、借鉴位置和第三方协议说明。
 - `LICENSES/`：保留的上游项目协议文本。
 
