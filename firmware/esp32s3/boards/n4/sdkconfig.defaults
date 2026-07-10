@@ -1,0 +1,16 @@
+# ESP32-S3 modules with 4 MB Quad SPI flash and no required PSRAM.
+#
+# This is the broadest compatibility profile. The current firmware does not
+# require external PSRAM, and the single-app partition fits inside 4 MB flash.
+# It should also boot on larger-flash boards when a PSRAM-specific build is not
+# needed.
+
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_ESPTOOLPY_FLASHMODE="dio"
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+CONFIG_ESPTOOLPY_FLASHFREQ="80m"
+
+# Keep PSRAM disabled for maximum board compatibility.
+# CONFIG_SPIRAM is not set

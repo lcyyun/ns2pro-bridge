@@ -1,0 +1,22 @@
+menu "NS2 ESP32-S3 board controls"
+
+config NS2_BOOT_BUTTON_GPIO
+    int "BOOT button GPIO"
+    default 0
+    help
+        GPIO used by the board BOOT button. ESP32-S3 boards usually wire BOOT
+        to GPIO0 active-low.
+
+config NS2_STATUS_LED_ENABLE
+    bool "Enable status RGB LED"
+    default y
+
+config NS2_STATUS_LED_GPIO
+    int "Status RGB LED GPIO"
+    depends on NS2_STATUS_LED_ENABLE
+    default 48
+    help
+        GPIO for the onboard addressable RGB LED. ESP32-S3 SuperMini boards
+        commonly use GPIO48.
+
+endmenu

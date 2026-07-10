@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DualSense Haptics Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0e12;
+      --surface: #12171d;
+      --surface-2: #171e26;
+      --line: #29333e;
+      --line-hot: #3b4b59;
+      --text: #eef4f8;
+      --muted: #91a0ab;
+      --cyan: #32c7d9;
+      --amber: #f0a63a;
+      --green: #49c889;
+      --red: #ef6666;
+      --blue: #5e92ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 "Segoe UI", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+    button, select, input { font: inherit; letter-spacing: 0; }
+    button:focus-visible, select:focus-visible, input:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+    header {
+      height: 58px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+      background: #0f1318;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    h1 { font-size: 17px; margin: 0; font-weight: 650; }
+    .subtitle { color: var(--muted); font-size: 12px; margin-left: 10px; }
+    .header-status { display: flex; gap: 8px; align-items: center; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #5f6972; flex: 0 0 auto; }
+    .status.ok .dot { background: var(--green); box-shadow: 0 0 0 3px #49c88920; }
+    main { max-width: 1420px; margin: 0 auto; padding: 20px 24px 30px; }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    button {
+      min-height: 36px;
+      padding: 7px 12px;
+      border: 1px solid var(--line-hot);
+      border-radius: 4px;
+      color: var(--text);
+      background: #182029;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) { border-color: #687885; background: #202b35; }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { opacity: .42; cursor: not-allowed; }
+    button.primary { background: #126a76; border-color: #238f9d; }
+    button.warn { background: #704717; border-color: #9b6725; }
+    button.stop { background: #67252a; border-color: #934148; }
+    button.active { background: #176e4a; border-color: #2e9c70; }
+    .spacer { flex: 1; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr); gap: 16px; }
+    section {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    section + section { margin-top: 16px; }
+    .section-head {
+      min-height: 47px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #141a20;
+    }
+    h2 { font-size: 14px; margin: 0; font-weight: 650; }
+    .tag { color: var(--muted); font: 12px Consolas, monospace; }
+    .section-body { padding: 14px; }
+    .controls { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 12px 14px; }
+    label { display: block; color: var(--muted); font-size: 12px; }
+    label .value { float: right; color: var(--text); font-family: Consolas, monospace; }
+    input[type="range"] { width: 100%; accent-color: var(--cyan); margin: 8px 0 0; }
+    select {
+      width: 100%;
+      min-height: 36px;
+      margin-top: 6px;
+      border: 1px solid var(--line-hot);
+      border-radius: 4px;
+      color: var(--text);
+      background: #11171d;
+      padding: 6px 9px;
+    }
+    .channel-grid { display: grid; grid-template-columns: repeat(4, minmax(70px, 1fr)); gap: 8px; margin: 14px 0; }
+    .channel {
+      position: relative;
+      height: 68px;
+      border: 1px solid var(--line-hot);
+      border-radius: 4px;
+      background: #10151b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+    }
+    .channel input { position: absolute; opacity: 0; }
+    .channel strong { font: 16px Consolas, monospace; z-index: 1; }
+    .channel span { color: var(--muted); font-size: 11px; z-index: 1; }
+    .channel .meter { position: absolute; inset: auto 0 0; height: 0; background: #32c7d930; transition: height 70ms linear; }
+    .channel:has(input:checked) { border-color: var(--cyan); background: #102a30; }
+    .channel.front:has(input:checked) { border-color: var(--amber); background: #2c2113; }
+    .preset-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .preset-grid button { min-height: 42px; padding: 6px 7px; }
+    .scope {
+      height: 150px;
+      border: 1px solid var(--line);
+      background: #090c10;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .motor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .motor-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+    .quick-tests { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .quick-tests button { min-height: 46px; text-align: left; }
+    .quick-tests small { display: block; color: var(--muted); margin-top: 2px; }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); margin-top: 14px; }
+    .metric { min-height: 58px; padding: 9px 11px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .metric:nth-child(2n) { border-right: 0; }
+    .metric:nth-last-child(-n+2) { border-bottom: 0; }
+    .metric span { display: block; color: var(--muted); font-size: 11px; }
+    .metric strong { display: block; margin-top: 4px; font: 15px Consolas, monospace; }
+    .log {
+      height: 214px;
+      overflow: auto;
+      background: #090c10;
+      color: #b9c6ce;
+      font: 12px/1.55 Consolas, monospace;
+      padding: 10px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .log .good { color: #70dda6; }
+    .log .bad { color: #ff8585; }
+    .log .info { color: #6ed6e4; }
+    .support { color: var(--muted); font-size: 12px; }
+    @media (max-width: 920px) {
+      header { padding: 0 14px; }
+      .subtitle { display: none; }
+      main { padding: 14px; }
+      .grid { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      .preset-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      header { height: auto; min-height: 58px; flex-wrap: wrap; padding-block: 8px; }
+      .header-status { width: 100%; }
+      .status { flex: 1; justify-content: center; }
+      .controls { grid-template-columns: 1fr; }
+      .channel-grid { grid-template-columns: 1fr 1fr; }
+      .motor-actions { grid-template-columns: 1fr 1fr; }
+      .quick-tests { grid-template-columns: 1fr; }
+      .spacer { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>DualSense Haptics Lab <span class="subtitle">054C:0CE6</span></h1></div>
+    <div class="header-status">
+      <div class="status" id="hidStatus"><i class="dot"></i><span>HID 未连接</span></div>
+      <div class="status" id="audioStatus"><i class="dot"></i><span>音频未启动</span></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <button class="primary" id="connectHid">连接 DualSense HID</button>
+      <select id="audioDevice" aria-label="音频输出设备" style="width:min(330px,100%);margin:0"><option value="">系统默认音频输出</option></select>
+      <button id="selectAudio">查找 DualSense 音频</button>
+      <button id="resumeAudio">启动音频引擎</button>
+      <div class="spacer"></div>
+      <button class="stop" id="stopAll">全部停止</button>
+    </div>
+
+    <div class="grid">
+      <div>
+        <section>
+          <div class="section-head">
+            <h2>4 声道音频震动</h2>
+            <span class="tag" id="audioRoute">48 kHz / 4 ch / idle</span>
+          </div>
+          <div class="section-body">
+            <div class="scope"><canvas id="scope"></canvas></div>
+            <div class="controls">
+              <label>频率 <span class="value" id="frequencyValue">160 Hz</span><input id="frequency" type="range" min="70" max="511" value="160"></label>
+              <label>强度 <span class="value" id="amplitudeValue">35%</span><input id="amplitude" type="range" min="0" max="100" value="35"></label>
+              <label>波形<select id="waveform"><option value="sine">Sine</option><option value="triangle">Triangle</option><option value="square">Square</option><option value="sawtooth">Sawtooth</option><option value="noise">Noise</option></select></label>
+            </div>
+
+            <div class="channel-grid" id="channels">
+              <label class="channel front"><input type="checkbox" data-channel="0"><div class="meter"></div><strong>FL</strong><span>前左</span></label>
+              <label class="channel front"><input type="checkbox" data-channel="1"><div class="meter"></div><strong>FR</strong><span>前右</span></label>
+              <label class="channel"><input type="checkbox" data-channel="2" checked><div class="meter"></div><strong>RL</strong><span>后左震动</span></label>
+              <label class="channel"><input type="checkbox" data-channel="3" checked><div class="meter"></div><strong>RR</strong><span>后右震动</span></label>
+            </div>
+
+            <div class="preset-grid">
+              <button id="startTone" class="primary">持续输出</button>
+              <button data-pattern="pulse">脉冲</button>
+              <button data-pattern="double">双击</button>
+              <button data-pattern="sweep">扫频</button>
+              <button data-preset="low-left">左低频</button>
+              <button data-preset="high-left">左高频</button>
+              <button data-preset="low-right">右低频</button>
+              <button data-preset="high-right">右高频</button>
+              <button data-pattern="alternate">左右交替</button>
+              <button data-pattern="texture">纹理</button>
+              <button data-pattern="front">前声道校验</button>
+              <button data-pattern="range">全频段序列</button>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head"><h2>DualSense 普通马达</h2><span class="tag">HID report 0x02 / 40 ms</span></div>
+          <div class="section-body">
+            <div class="motor-row">
+              <label>左重马达 <span class="value" id="heavyValue">50%</span><input id="heavy" type="range" min="0" max="255" value="128"></label>
+              <label>右轻马达 <span class="value" id="lightValue">50%</span><input id="light" type="range" min="0" max="255" value="128"></label>
+            </div>
+            <div class="motor-actions">
+              <button data-motor="heavy">左重</button>
+              <button data-motor="light">右轻</button>
+              <button data-motor="both">双马达</button>
+              <button id="motorStop" class="stop">停止马达</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside>
+        <section>
+          <div class="section-head"><h2>组合测试</h2><span class="tag">diagnostics</span></div>
+          <div class="section-body">
+            <div class="quick-tests">
+              <button data-test="audio-lr">音频左右<small>RL 80 Hz / RR 500 Hz</small></button>
+              <button data-test="motor-lr">马达左右<small>重马达 / 轻马达</small></button>
+              <button data-test="mixed">混合路径<small>音频 + 普通马达</small></button>
+              <button data-test="stress">持续压力<small>10 秒纹理 + HID</small></button>
+            </div>
+            <div class="metrics">
+              <div class="metric"><span>AudioContext</span><strong id="contextState">closed</strong></div>
+              <div class="metric"><span>输出声道</span><strong id="channelCount">--</strong></div>
+              <div class="metric"><span>HID 发送</span><strong id="hidPackets">0</strong></div>
+              <div class="metric"><span>运行时间</span><strong id="runTime">0.0 s</strong></div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head"><h2>事件</h2><button id="clearLog">清空</button></div>
+          <div class="log" id="log"></div>
+        </section>
+
+        <section>
+          <div class="section-head"><h2>浏览器能力</h2></div>
+          <div class="section-body support" id="support"></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const state = {
+      hid: null,
+      hidTimer: 0,
+      hidPackets: 0,
+      motorHeavy: 0,
+      motorLight: 0,
+      audio: null,
+      merger: null,
+      master: null,
+      toneNodes: [],
+      patternNodes: [],
+      toneActive: false,
+      startedAt: 0,
+      selectedSink: "",
+      scopePhase: 0,
+      scopeLevel: 0,
+      testTimers: []
+    };
+
+    function stamp() { return new Date().toLocaleTimeString("zh-CN", { hour12: false }); }
+    function log(message, type = "") {
+      const line = document.createElement("div");
+      line.className = type;
+      line.textContent = `[${stamp()}] ${message}`;
+      $("log").prepend(line);
+    }
+    function setStatus(id, ok, text) {
+      const el = $(id);
+      el.classList.toggle("ok", ok);
+      el.querySelector("span").textContent = text;
+    }
+    function selectedChannels() {
+      return [...document.querySelectorAll("[data-channel]:checked")].map((el) => Number(el.dataset.channel));
+    }
+    function setChannels(channels) {
+      document.querySelectorAll("[data-channel]").forEach((el) => { el.checked = channels.includes(Number(el.dataset.channel)); });
+    }
+    function registerNode(node) {
+      state.patternNodes.push(node);
+      node.addEventListener?.("ended", () => { state.patternNodes = state.patternNodes.filter((item) => item !== node); });
+      return node;
+    }
+    function schedule(fn, delay) {
+      const timer = setTimeout(fn, delay);
+      state.testTimers.push(timer);
+      return timer;
+    }
+
+    async function ensureAudio() {
+      if (!window.AudioContext && !window.webkitAudioContext) throw new Error("浏览器不支持 Web Audio");
+      if (!state.audio) {
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        state.audio = new AudioCtor({ sampleRate: 48000, latencyHint: "interactive" });
+        if (state.selectedSink && typeof state.audio.setSinkId === "function") await state.audio.setSinkId(state.selectedSink);
+        configureOutputChannels();
+        state.merger = state.audio.createChannelMerger(4);
+        state.master = state.audio.createGain();
+        state.master.channelCount = 4;
+        state.master.channelCountMode = "explicit";
+        state.master.channelInterpretation = "discrete";
+        state.master.gain.value = 1;
+        state.merger.connect(state.master).connect(state.audio.destination);
+        state.audio.addEventListener("statechange", refreshAudioState);
+        log(`音频引擎创建：${state.audio.sampleRate} Hz，设备最大 ${state.audio.destination.maxChannelCount || 2} 声道`, "info");
+      }
+      if (state.audio.state !== "running") await state.audio.resume();
+      refreshAudioState();
+      return state.audio;
+    }
+
+    function configureOutputChannels() {
+      if (!state.audio) return 0;
+      const destination = state.audio.destination;
+      const maxChannels = destination.maxChannelCount || 2;
+      destination.channelCountMode = "explicit";
+      destination.channelInterpretation = "discrete";
+      destination.channelCount = Math.min(4, Math.max(2, maxChannels));
+      if (maxChannels < 4) log(`当前音频设备仅报告 ${maxChannels} 声道，RL/RR 可能被下混`, "bad");
+      refreshAudioState();
+      return maxChannels;
+    }
+
+    function refreshAudioState() {
+      const context = state.audio;
+      const running = context?.state === "running";
+      setStatus("audioStatus", running, running ? "音频已启动" : "音频未启动");
+      $("contextState").textContent = context?.state || "closed";
+      $("channelCount").textContent = context ? `${context.destination.channelCount} / max ${context.destination.maxChannelCount}` : "--";
+      $("audioRoute").textContent = context ? `${context.sampleRate} Hz / ${context.destination.channelCount} ch / ${state.toneActive ? "stream" : "idle"}` : "48 kHz / 4 ch / idle";
+    }
+
+    async function refreshAudioOutputs() {
+      if (!navigator.mediaDevices) throw new Error("浏览器不支持音频设备选择");
+      const select = $("audioDevice");
+      const previous = state.selectedSink || select.value;
+      const devices = (await navigator.mediaDevices.enumerateDevices()).filter((item) => item.kind === "audiooutput");
+      select.textContent = "";
+      select.add(new Option("系统默认音频输出", ""));
+      devices.filter((item) => item.deviceId !== "default").forEach((item, index) => {
+        select.add(new Option(item.label || `音频输出 ${index + 1}`, item.deviceId));
+      });
+      if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+      return devices;
+    }
+
+    async function revealAudioDevicesIfNeeded(devices) {
+      if (devices.some((item) => item.label)) return devices;
+      if (typeof navigator.mediaDevices.getUserMedia !== "function") return devices;
+      log("请求一次音频设备权限以读取输出设备名称", "info");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      stream.getTracks().forEach((track) => track.stop());
+      return refreshAudioOutputs();
+    }
+
+    async function applyAudioSink(deviceId, label = "") {
+      state.selectedSink = deviceId || "";
+      $("audioDevice").value = state.selectedSink;
+      if (state.audio && typeof state.audio.setSinkId === "function") {
+        await state.audio.setSinkId(state.selectedSink);
+        configureOutputChannels();
+      }
+      log(`音频输出：${label || "系统默认音频输出"}`, "good");
+    }
+
+    async function chooseAudioOutput() {
+      if (!navigator.mediaDevices) throw new Error("浏览器不支持音频设备选择");
+      let device = null;
+      if (typeof navigator.mediaDevices.selectAudioOutput === "function") {
+        device = await navigator.mediaDevices.selectAudioOutput();
+      } else {
+        const outputs = await revealAudioDevicesIfNeeded(await refreshAudioOutputs());
+        device = outputs.find((item) => /DualSense Wireless Controller/i.test(item.label));
+        if (!device && $("audioDevice").value) device = outputs.find((item) => item.deviceId === $("audioDevice").value);
+        if (!device) throw new Error("未找到 DualSense 音频输出；可从设备列表选择或设为系统默认输出");
+      }
+      await refreshAudioOutputs();
+      await applyAudioSink(device.deviceId, device.label || "已授权设备");
+    }
+
+    function makeNoise(context, seconds = 2) {
+      const frames = Math.ceil(context.sampleRate * seconds);
+      const buffer = context.createBuffer(1, frames, context.sampleRate);
+      const data = buffer.getChannelData(0);
+      let held = 0;
+      for (let i = 0; i < frames; i++) {
+        if ((i & 31) === 0) held = Math.random() * 2 - 1;
+        data[i] = held * .75 + (Math.random() * 2 - 1) * .25;
+      }
+      return buffer;
+    }
+
+    function routeSource(source, channels, gainValue, startAt, stopAt, envelope = null) {
+      const context = state.audio;
+      channels.forEach((channel) => {
+        const gain = context.createGain();
+        gain.channelCount = 1;
+        gain.gain.setValueAtTime(envelope ? 0 : gainValue, startAt);
+        if (envelope) envelope(gain.gain, startAt, stopAt, gainValue);
+        source.connect(gain).connect(state.merger, 0, channel);
+      });
+      if (typeof source.start === "function") source.start(startAt);
+      if (stopAt && typeof source.stop === "function") source.stop(stopAt);
+      registerNode(source);
+      state.scopeLevel = gainValue;
+    }
+
+    function createSource(waveform, frequency) {
+      const context = state.audio;
+      if (waveform === "noise") {
+        const source = context.createBufferSource();
+        source.buffer = makeNoise(context, 2);
+        source.loop = true;
+        return source;
+      }
+      const oscillator = context.createOscillator();
+      oscillator.type = waveform;
+      oscillator.frequency.value = frequency;
+      return oscillator;
+    }
+
+    async function startTone() {
+      await ensureAudio();
+      stopTone();
+      const frequency = Number($("frequency").value);
+      const amplitude = Number($("amplitude").value) / 100;
+      const channels = selectedChannels();
+      if (!channels.length) throw new Error("至少选择一个声道");
+      const source = createSource($("waveform").value, frequency);
+      const gains = [];
+      channels.forEach((channel) => {
+        const gain = state.audio.createGain();
+        gain.gain.value = amplitude;
+        source.connect(gain).connect(state.merger, 0, channel);
+        gains.push(gain);
+      });
+      source.start();
+      state.toneNodes = [source, ...gains];
+      state.toneActive = true;
+      state.startedAt = performance.now();
+      state.scopeLevel = amplitude;
+      $("startTone").textContent = "停止持续输出";
+      $("startTone").classList.add("active");
+      refreshAudioState();
+      log(`持续输出：${frequency} Hz / ${Math.round(amplitude * 100)}% / ch ${channels.join(",")}`, "good");
+    }
+
+    function stopTone() {
+      state.toneNodes.forEach((node) => { try { node.stop?.(); } catch {} try { node.disconnect?.(); } catch {} });
+      state.toneNodes = [];
+      state.toneActive = false;
+      $("startTone").textContent = "持续输出";
+      $("startTone").classList.remove("active");
+      refreshAudioState();
+    }
+
+    async function playBurst({ frequency, amplitude, channels, duration, delay = 0, waveform = "sine", attack = .006, release = .025 }) {
+      await ensureAudio();
+      const start = state.audio.currentTime + .025 + delay;
+      const stop = start + duration;
+      const source = createSource(waveform, frequency);
+      const envelope = (gain, at, end, level) => {
+        gain.linearRampToValueAtTime(level, at + Math.min(attack, duration * .25));
+        gain.setValueAtTime(level, Math.max(at + attack, end - release));
+        gain.linearRampToValueAtTime(0, end);
+      };
+      routeSource(source, channels, amplitude, start, stop, envelope);
+    }
+
+    async function playPattern(name) {
+      const amplitude = Number($("amplitude").value) / 100;
+      const frequency = Number($("frequency").value);
+      const channels = selectedChannels().length ? selectedChannels() : [2, 3];
+      if (name === "pulse") await playBurst({ frequency, amplitude, channels, duration: .22 });
+      if (name === "double") {
+        await playBurst({ frequency: Math.max(80, frequency), amplitude, channels, duration: .07 });
+        await playBurst({ frequency: Math.max(80, frequency), amplitude, channels, duration: .09, delay: .14 });
+      }
+      if (name === "alternate") {
+        for (let i = 0; i < 8; i++) await playBurst({ frequency: i % 2 ? 500 : 90, amplitude, channels: [i % 2 ? 3 : 2], duration: .11, delay: i * .13 });
+      }
+      if (name === "texture") await playBurst({ frequency, amplitude, channels, duration: 2.5, waveform: "noise", attack: .03, release: .08 });
+      if (name === "front") await playBurst({ frequency: 120, amplitude, channels: [0, 1], duration: 1.2 });
+      if (name === "sweep") {
+        await ensureAudio();
+        const start = state.audio.currentTime + .03;
+        const stop = start + 3;
+        const oscillator = state.audio.createOscillator();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(35, start);
+        oscillator.frequency.exponentialRampToValueAtTime(511, stop);
+        routeSource(oscillator, channels, amplitude, start, stop, (gain, at, end, level) => {
+          gain.linearRampToValueAtTime(level, at + .03);
+          gain.setValueAtTime(level, end - .08);
+          gain.linearRampToValueAtTime(0, end);
+        });
+      }
+      if (name === "range") {
+        const frequencies = [70, 100, 140, 200, 280, 375, 500];
+        for (let i = 0; i < frequencies.length; i++) await playBurst({ frequency: frequencies[i], amplitude, channels, duration: .28, delay: i * .35 });
+      }
+      state.startedAt = performance.now();
+      log(`音频测试：${name}`, "info");
+    }
+
+    async function connectHid() {
+      if (!navigator.hid) throw new Error("浏览器不支持 WebHID");
+      const devices = await navigator.hid.requestDevice({ filters: [{ vendorId: 0x054c, productId: 0x0ce6 }] });
+      if (!devices.length) return;
+      state.hid = devices[0];
+      if (!state.hid.opened) await state.hid.open();
+      state.hid.addEventListener("inputreport", () => {});
+      setStatus("hidStatus", true, "HID 已连接");
+      $("connectHid").textContent = "HID 已连接";
+      log(`HID：${state.hid.productName || "DualSense Wireless Controller"}`, "good");
+    }
+
+    async function sendMotorReport(heavy, light) {
+      if (!state.hid?.opened) throw new Error("请先连接 DualSense HID");
+      const payload = new Uint8Array(47);
+      payload[0] = 0x03;
+      payload[2] = light;
+      payload[3] = heavy;
+      payload[38] = 0x04;
+      await state.hid.sendReport(0x02, payload);
+      state.hidPackets++;
+      $("hidPackets").textContent = String(state.hidPackets);
+    }
+
+    async function motorTick() {
+      try { await sendMotorReport(state.motorHeavy, state.motorLight); }
+      catch (error) { stopMotors(); log(error.message, "bad"); }
+    }
+
+    function startMotors(heavy, light) {
+      if (!state.hid?.opened) throw new Error("请先连接 DualSense HID");
+      stopMotors(false);
+      state.motorHeavy = heavy;
+      state.motorLight = light;
+      motorTick();
+      state.hidTimer = setInterval(motorTick, 40);
+      state.startedAt = performance.now();
+      log(`普通马达：heavy ${heavy} / light ${light}`, "good");
+    }
+
+    function stopMotors(sendStop = true) {
+      clearInterval(state.hidTimer);
+      state.hidTimer = 0;
+      state.motorHeavy = 0;
+      state.motorLight = 0;
+      if (sendStop && state.hid?.opened) {
+        let count = 0;
+        const timer = setInterval(() => {
+          sendMotorReport(0, 0).catch(() => {});
+          if (++count >= 4) clearInterval(timer);
+        }, 30);
+      }
+    }
+
+    async function runTest(name) {
+      if (name === "audio-lr") {
+        await playBurst({ frequency: 80, amplitude: .55, channels: [2], duration: 1 });
+        await playBurst({ frequency: 500, amplitude: .55, channels: [3], duration: 1, delay: 1.15 });
+      }
+      if (name === "motor-lr") {
+        startMotors(180, 0);
+        schedule(() => startMotors(0, 180), 900);
+        schedule(() => stopMotors(), 1800);
+      }
+      if (name === "mixed") {
+        startMotors(100, 90);
+        await playPattern("alternate");
+        schedule(() => stopMotors(), 1800);
+      }
+      if (name === "stress") {
+        startMotors(75, 60);
+        for (let i = 0; i < 5; i++) await playBurst({ frequency: 130, amplitude: .38, channels: [2, 3], duration: 2, delay: i * 2, waveform: "noise", attack: .02, release: .06 });
+        schedule(() => stopMotors(), 10000);
+      }
+      state.startedAt = performance.now();
+      log(`组合测试：${name}`, "info");
+    }
+
+    function stopAll() {
+      state.testTimers.forEach(clearTimeout);
+      state.testTimers = [];
+      stopTone();
+      stopMotors();
+      state.patternNodes.forEach((node) => { try { node.stop?.(); } catch {} try { node.disconnect?.(); } catch {} });
+      state.patternNodes = [];
+      state.scopeLevel = 0;
+      log("全部停止", "bad");
+    }
+
+    function updateTone() {
+      $("frequencyValue").textContent = `${$("frequency").value} Hz`;
+      $("amplitudeValue").textContent = `${$("amplitude").value}%`;
+      if (!state.toneActive) return;
+      const source = state.toneNodes[0];
+      if (source?.frequency) source.frequency.setTargetAtTime(Number($("frequency").value), state.audio.currentTime, .01);
+      state.toneNodes.slice(1).forEach((gain) => gain.gain.setTargetAtTime(Number($("amplitude").value) / 100, state.audio.currentTime, .01));
+      state.scopeLevel = Number($("amplitude").value) / 100;
+    }
+
+    function drawScope() {
+      const canvas = $("scope");
+      const ratio = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.floor(canvas.clientWidth * ratio));
+      const height = Math.max(1, Math.floor(canvas.clientHeight * ratio));
+      if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, width, height);
+      ctx.strokeStyle = "#1d2831";
+      ctx.lineWidth = ratio;
+      for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(0, height * i / 4); ctx.lineTo(width, height * i / 4); ctx.stroke(); }
+      const active = state.toneActive || state.patternNodes.length > 0;
+      const level = active ? state.scopeLevel : 0;
+      const frequency = Number($("frequency").value);
+      ctx.strokeStyle = "#32c7d9";
+      ctx.lineWidth = 1.5 * ratio;
+      ctx.beginPath();
+      for (let x = 0; x < width; x++) {
+        const cycles = Math.max(1, Math.min(14, frequency / 70));
+        const y = height / 2 + Math.sin((x / width * cycles * Math.PI * 2) + state.scopePhase) * height * .38 * level;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      state.scopePhase += active ? .14 : .015;
+      document.querySelectorAll(".channel .meter").forEach((meter) => { meter.style.height = `${active && meter.parentElement.querySelector("input").checked ? level * 100 : 0}%`; });
+      $("runTime").textContent = state.startedAt ? `${((performance.now() - state.startedAt) / 1000).toFixed(1)} s` : "0.0 s";
+      requestAnimationFrame(drawScope);
+    }
+
+    function bind() {
+      $("connectHid").addEventListener("click", () => connectHid().catch((error) => log(error.message, "bad")));
+      $("selectAudio").addEventListener("click", () => chooseAudioOutput().catch((error) => log(error.message, "bad")));
+      $("audioDevice").addEventListener("change", () => applyAudioSink($("audioDevice").value, $("audioDevice").selectedOptions[0]?.textContent).catch((error) => log(error.message, "bad")));
+      $("resumeAudio").addEventListener("click", () => ensureAudio().catch((error) => log(error.message, "bad")));
+      $("stopAll").addEventListener("click", stopAll);
+      $("startTone").addEventListener("click", () => state.toneActive ? stopTone() : startTone().catch((error) => log(error.message, "bad")));
+      $("frequency").addEventListener("input", updateTone);
+      $("amplitude").addEventListener("input", updateTone);
+      $("waveform").addEventListener("change", () => { if (state.toneActive) startTone().catch((error) => log(error.message, "bad")); });
+      document.querySelectorAll("[data-pattern]").forEach((button) => button.addEventListener("click", () => playPattern(button.dataset.pattern).catch((error) => log(error.message, "bad"))));
+      document.querySelectorAll("[data-preset]").forEach((button) => button.addEventListener("click", () => {
+        const [band, side] = button.dataset.preset.split("-");
+        $("frequency").value = band === "low" ? 80 : 500;
+        setChannels(side === "left" ? [2] : [3]);
+        updateTone();
+        playBurst({ frequency: Number($("frequency").value), amplitude: Number($("amplitude").value) / 100, channels: selectedChannels(), duration: 1 }).catch((error) => log(error.message, "bad"));
+      }));
+      $("heavy").addEventListener("input", () => { $("heavyValue").textContent = `${Math.round(Number($("heavy").value) / 2.55)}%`; });
+      $("light").addEventListener("input", () => { $("lightValue").textContent = `${Math.round(Number($("light").value) / 2.55)}%`; });
+      document.querySelectorAll("[data-motor]").forEach((button) => button.addEventListener("click", () => {
+        const heavy = Number($("heavy").value), light = Number($("light").value);
+        try { startMotors(button.dataset.motor === "light" ? 0 : heavy, button.dataset.motor === "heavy" ? 0 : light); }
+        catch (error) { log(error.message, "bad"); }
+      }));
+      $("motorStop").addEventListener("click", () => { stopMotors(); log("普通马达停止"); });
+      document.querySelectorAll("[data-test]").forEach((button) => button.addEventListener("click", () => runTest(button.dataset.test).catch((error) => log(error.message, "bad"))));
+      $("clearLog").addEventListener("click", () => { $("log").textContent = ""; });
+      navigator.hid?.addEventListener("disconnect", (event) => {
+        if (event.device === state.hid) { stopMotors(false); state.hid = null; setStatus("hidStatus", false, "HID 已断开"); log("HID 已断开", "bad"); }
+      });
+      navigator.mediaDevices?.addEventListener("devicechange", () => refreshAudioOutputs().catch(() => {}));
+      $("support").textContent = `WebHID ${navigator.hid ? "OK" : "NO"}  |  WebAudio ${window.AudioContext || window.webkitAudioContext ? "OK" : "NO"}  |  Audio output ${navigator.mediaDevices?.selectAudioOutput ? "picker" : "default"}  |  setSinkId ${window.AudioContext?.prototype?.setSinkId ? "OK" : "NO"}`;
+      updateTone();
+      refreshAudioOutputs().catch(() => {});
+      log("测试台已就绪", "info");
+      drawScope();
+    }
+    bind();
+  </script>
+</body>
+</html>
